@@ -10,6 +10,7 @@ import "@interest-protocol/dex/interfaces/IPair.sol";
 
 import "./interfaces/AggregatorV3Interface.sol";
 
+import "./lib/FixedPointMath.sol";
 import "./lib/Math.sol";
 
 contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
@@ -18,6 +19,7 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     using Math for uint256;
+    using FixedPointMath for uint256;
 
     /*///////////////////////////////////////////////////////////////
                               STATE
@@ -36,7 +38,13 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error Oracle__Int256InvalidCast();
+    error PriceOracle__InvalidPrice();
+
+    error PriceOracle__InvalidAddress();
+
+    error PriceOracle__InvalidAmount();
+
+    error PriceOracle__MissingFeed();
 
     /*///////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -53,6 +61,8 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     /**
      * @notice It calculates the price of USD of a `pair` token for an `amount` based on an fair price from Chainlink.
+     * @dev Logic taken from https://github.com/AlphaFinanceLab/homora-v2/blob/e643392d582c81f6695136971cff4b685dcd2859/contracts/oracle/UniswapV2Oracle.sol#L18
+
      *
      * @param pair The address of a pair token.
      * @param amount The number of tokens to calculate the value in USD.
@@ -60,13 +70,14 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      *
      * @dev It reverts if Chainlink returns a price equal or lower than 0. It also returns the value with a scaling factor of 1/1e18.
      */
-    function getLPTokenUSDPrice(IPair pair, uint256 amount)
+    function getIPXLPTokenUSDPrice(IPair pair, uint256 amount)
         external
         view
         returns (uint256 price)
     {
-        //solhint-disable-next-line reason-string
-        require(address(pair) != address(0) && amount > 0);
+        if (address(0) == address(pair)) revert PriceOracle__InvalidAddress();
+        if (0 == amount) revert PriceOracle__InvalidAmount();
+
         (
             address token0,
             address token1,
@@ -81,10 +92,11 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         AggregatorV3Interface token0Feed = getUSDFeed[token0];
         AggregatorV3Interface token1Feed = getUSDFeed[token1];
 
-        //solhint-disable-next-line reason-string
-        require(address(token0Feed) != address(0));
-        //solhint-disable-next-line reason-string
-        require(address(token1Feed) != address(0));
+        if (address(0) == address(token0Feed))
+            revert PriceOracle__MissingFeed();
+
+        if (address(0) == address(token1Feed))
+            revert PriceOracle__MissingFeed();
 
         (, int256 answer0, , , ) = token0Feed.latestRoundData();
         (, int256 answer1, , , ) = token1Feed.latestRoundData();
@@ -93,13 +105,18 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 price1 = _toUint256(answer1).adjust(token1Feed.decimals());
 
         /// @dev If total supply is zero it should throw and revert
-        // Get square root of K
-        uint256 sqrtK = Math.sqrt(reserve0 * (reserve1)) / pair.totalSupply();
+        // Get square root of K divided by the total supply * 2
+        // This value is encoded toa uint224 to improve the accuracy
+        uint256 doubleSqrtK = (reserve0 * reserve1).sqrt().mulDiv(
+            2**112,
+            pair.totalSupply()
+        ) * 2;
 
         // Get fair price of LP token in USD by re-engineering the K formula.
-        price = (((sqrtK * 2 * (price0.sqrt()))) * (price1.sqrt())).fmul(
-            amount
-        );
+        price = doubleSqrtK
+            .mulDiv(price0.sqrt(), 2**56)
+            .mulDiv(price1.sqrt(), 2**56)
+            .fmul(amount);
     }
 
     /**
@@ -116,18 +133,14 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         view
         returns (uint256 price)
     {
-        //solhint-disable-next-line reason-string
-        require(token != address(0) && amount > 0); // Zero argument
+        if (address(0) == token) revert PriceOracle__InvalidAddress();
+        if (0 == amount) revert PriceOracle__InvalidAmount();
 
         AggregatorV3Interface feed = getUSDFeed[token];
 
-        //solhint-disable-next-line reason-string
-        require(address(feed) != address(0)); // No Feed
+        if (address(0) == address(feed)) revert PriceOracle__MissingFeed();
 
         (, int256 answer, , , ) = feed.latestRoundData();
-
-        //solhint-disable-next-line reason-string
-        require(answer > 0);
 
         price = _toUint256(answer).adjust(feed.decimals()).fmul(amount);
     }
@@ -138,7 +151,7 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     function _toUint256(int256 value) internal pure returns (uint256) {
         //  Zero Price makes no sense for an asset
-        if (0 >= value) revert Oracle__Int256InvalidCast();
+        if (0 >= value) revert PriceOracle__InvalidPrice();
         return uint256(value);
     }
 
@@ -150,7 +163,7 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @notice It allows the {owner} to update the price feed for an `asset`.
      *
      * @param asset The token that will be associated with the feed.
-     * @param feed The address of the chain link oracle contract.
+     * @param feed The address of the chain link PriceOracle contract.
      *
      * Requirements:
      *

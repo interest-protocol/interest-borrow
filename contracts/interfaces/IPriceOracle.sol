@@ -7,7 +7,7 @@ interface IPriceOracle {
         view
         returns (uint256 price);
 
-    function getLPTokenUSDPrice(address pair, uint256 amount)
+    function getIPXLPTokenUSDPrice(address pair, uint256 amount)
         external
         view
         returns (uint256 price);

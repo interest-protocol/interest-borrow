@@ -15,7 +15,7 @@ import "@interest-protocol/earn/interfaces/ICasaDePapel.sol";
 import "./interfaces/IPriceOracle.sol";
 
 import "./lib/DataTypes.sol";
-import "./lib/Math.sol";
+import "./lib/FixedPointMath.sol";
 import "./lib/SafeCast.sol";
 import "./lib/UncheckedMath.sol";
 
@@ -25,7 +25,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using Math for uint256;
+    using FixedPointMath for uint256;
     using SafeCast for uint256;
     using UncheckedMath for uint256;
 
@@ -215,7 +215,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (
             !_isSolvent(
                 _msgSender(),
-                ORACLE.getLPTokenUSDPrice(
+                ORACLE.getIPXLPTokenUSDPrice(
                     address(COLLATERAL),
                     // Interest DEX LP tokens have 18 decimals
                     1 ether
@@ -301,7 +301,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             if (
                 !_isSolvent(
                     _msgSender(),
-                    ORACLE.getLPTokenUSDPrice(
+                    ORACLE.getIPXLPTokenUSDPrice(
                         address(COLLATERAL),
                         // Interest DEX LP tokens have 18 decimals
                         1 ether
@@ -336,7 +336,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         Route[] calldata path1
     ) external {
         // Liquidations must be based on the current exchange rate.
-        uint256 _exchangeRate = ORACLE.getLPTokenUSDPrice(
+        uint256 _exchangeRate = ORACLE.getIPXLPTokenUSDPrice(
             address(COLLATERAL),
             // Interest DEX LP tokens have 18 decimals
             1 ether
