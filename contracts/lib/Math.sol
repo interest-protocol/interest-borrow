@@ -160,4 +160,8 @@ library Math {
         uint256 r1 = x / r;
         return (r < r1 ? r : r1);
     }
+
+    function min(uint256 x, uint256 y) internal pure returns (uint256) {
+        return x > y ? y : x;
+    }
 }

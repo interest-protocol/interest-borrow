@@ -73,28 +73,19 @@ async function deployFixture() {
 }
 
 describe('PriceOracle', function () {
-  describe('function: setUSDFeed', async () => {
-    const { priceOracle, alice, btc } = await loadFixture(deployFixture);
+  describe('function: initialize', () => {
+    it('reverts if you try to initialize it after deployment', async () => {
+      const { priceOracle } = await loadFixture(deployFixture);
 
-    it('reverts if it is not called by the owner', async () => {
-      await expect(
-        priceOracle.connect(alice).setUSDFeed(btc.address, BTC_USD_PRICE_FEED)
-      ).to.revertedWith('Ownable: caller is not the owner');
+      await expect(priceOracle.initialize()).to.revertedWith(
+        'Initializable: contract is already initialized'
+      );
     });
 
-    it('updates the price feed of a token', async () => {
-      const { priceOracle, alice, ether, owner } = await loadFixture(
-        deployFixture
-      );
-      expect(await priceOracle.getUSDFeed(ether.address)).to.be.equal(
-        ETHER_USD_PRICE_FEED
-      );
+    it('sets the owner', async () => {
+      const { priceOracle, owner } = await loadFixture(deployFixture);
 
-      await priceOracle.connect(owner).setUSDFeed(ether.address, alice.address);
-
-      expect(await priceOracle.getUSDFeed(ether.address)).to.be.equal(
-        alice.address
-      );
+      expect(await priceOracle.owner()).to.be.equal(owner.address);
     });
   });
 

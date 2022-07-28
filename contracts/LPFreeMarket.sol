@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
 import "@interest-protocol/dex/lib/DataTypes.sol";
 import "@interest-protocol/dex/interfaces/IRouter.sol";
 import "@interest-protocol/dex/interfaces/IPair.sol";
@@ -13,9 +14,10 @@ import "@interest-protocol/tokens/interfaces/IDinero.sol";
 import "@interest-protocol/earn/interfaces/ICasaDePapel.sol";
 
 import "./interfaces/IPriceOracle.sol";
+import "./interfaces/ISwap.sol";
 
-import "./lib/DataTypes.sol";
 import "./lib/FixedPointMath.sol";
+import "./lib/Math.sol";
 import "./lib/SafeCast.sol";
 import "./lib/UncheckedMath.sol";
 
@@ -26,6 +28,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using FixedPointMath for uint256;
+    using Math for uint256;
     using SafeCast for uint256;
     using UncheckedMath for uint256;
 
@@ -82,53 +85,25 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     error LPFreeMarket__InvalidLiquidationAmount();
 
+    error LPFreeMarket__Reentrancy();
+
     /*///////////////////////////////////////////////////////////////
-                                STATE
+                                  STRUCTS
     //////////////////////////////////////////////////////////////*/
 
-    // Interest Swap Router address
-    IRouter public ROUTER;
+    struct LiquidationInfo {
+        uint256 allCollateral;
+        uint128 allPrincipal;
+        uint128 allFee;
+    }
 
-    // Dinero address
-    IDinero public DNR;
+    struct Account {
+        uint128 collateral;
+        uint128 rewards;
+        uint256 rewardDebt;
+    }
 
-    // Interest Swap LP token
-    IERC20Upgradeable public COLLATERAL;
-
-    ICasaDePapel public CASA_DE_PAPEL;
-
-    // Contract uses Chainlink to obtain the price in USD with 18 decimals
-    IPriceOracle public ORACLE;
-
-    // Governance token for Interest Protocol
-    IERC20Upgradeable public IPX;
-
-    // The current master chef farm being used.
-    uint256 public POOL_ID;
-
-    // principal + interest rate / collateral. If it is above this value, the user might get liquidated.
-    uint256 public maxLTVRatio;
-
-    // A fee that will be charged as a penalty of being liquidated.
-    uint256 public liquidationFee;
-
-    // Total amount of Dinero borrowed from this contract.
-    uint256 public totalPrincipal;
-
-    // Total amount of rewards per token ever collected by this contract
-    uint256 public totalRewardsPerToken;
-
-    // total amount of staking token in the contract
-    uint256 public totalAmount;
-
-    // Dinero Markets must have a max of how much DNR they can create to prevent liquidity issues during liquidations.
-    uint256 public maxBorrowAmount;
-
-    // How much principal an address has borrowed.
-    mapping(address => uint256) public userPrincipal;
-
-    mapping(address => LPFreeMarketUser) public userAccount;
-
+    // NO MEMORY SLOT
     // Requests
     uint256 internal constant DEPOSIT_REQUEST = 0;
 
@@ -137,6 +112,94 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     uint256 internal constant BORROW_REQUEST = 2;
 
     uint256 internal constant REPAY_REQUEST = 3;
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 0                            */
+
+    // Interest Swap Router address
+    IRouter public ROUTER;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 1                            */
+
+    // Dinero address
+    IDinero public DNR;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 2                            */
+
+    // Dinero address
+    IERC20Upgradeable public COLLATERAL;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 3                            */
+
+    ICasaDePapel public CASA_DE_PAPEL;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 4                            */
+
+    // Contract uses Chainlink to obtain the price in USD with 18 decimals
+    IPriceOracle public ORACLE;
+
+    // A fee that will be charged as a penalty of being liquidated.
+    uint96 public liquidationFee;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 5                            */
+
+    // Governance token for Interest Protocol
+    IERC20Upgradeable public IPX;
+
+    // The current master chef farm being used.
+    uint96 public POOL_ID;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 6                            */
+
+    // principal + interest rate / collateral. If it is above this value, the user might get liquidated.
+    uint128 public maxLTVRatio;
+
+    // total amount of staking token in the contract
+    uint128 public totalAmount;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 7                            */
+
+    // Total amount of Dinero borrowed from this contract.
+    uint128 public totalPrincipal;
+
+    // Dinero Markets must have a max of how much DNR they can create to prevent liquidity issues during liquidations.
+    uint128 public maxBorrowAmount;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 8                            */
+
+    // Total amount of rewards per token ever collected by this contract
+    uint256 public totalRewardsPerToken;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 9                            */
+
+    // How much principal an address has borrowed.
+    mapping(address => uint256) public userPrincipal;
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 10                            */
+
+    mapping(address => Account) public userAccount;
+
+    //////////////////////////////////////////////////////////////
 
     /*///////////////////////////////////////////////////////////////
                             INITIALIZER
@@ -163,20 +226,6 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         IPX.safeApprove(address(CASA_DE_PAPEL), type(uint256).max);
         COLLATERAL.safeApprove(address(CASA_DE_PAPEL), type(uint256).max);
         COLLATERAL.safeApprove(address(ROUTER), type(uint256).max);
-
-        (address token0, address token1, , , , , , ) = IPair(
-            address(COLLATERAL)
-        ).metadata();
-
-        // We need to approve the router to {transferFrom} token0 and token1 to sell them for {DINERO}.
-        IERC20Upgradeable(token0).safeApprove(
-            address(ROUTER),
-            type(uint256).max
-        );
-        IERC20Upgradeable(token1).safeApprove(
-            address(ROUTER),
-            type(uint256).max
-        );
     }
 
     function _initializeContracts(bytes memory data) private {
@@ -196,7 +245,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _initializeSettings(bytes memory data) private {
         (maxLTVRatio, liquidationFee, maxBorrowAmount, POOL_ID) = abi.decode(
             data,
-            (uint256, uint256, uint256, uint256)
+            (uint128, uint96, uint128, uint96)
         );
     }
 
@@ -222,6 +271,15 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                 )
             )
         ) revert LPFreeMarket__InsolventCaller();
+    }
+
+    // Basic nonreentrancy guard
+    uint256 private _unlocked = 1;
+    modifier lock() {
+        if (_unlocked != 1) revert LPFreeMarket__Reentrancy();
+        _unlocked = 2;
+        _;
+        _unlocked = 1;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -261,19 +319,19 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit Compound(rewards, fee);
     }
 
-    function deposit(address to, uint256 amount) external {
+    function deposit(address to, uint256 amount) external lock {
         _deposit(to, amount);
     }
 
-    function withdraw(address to, uint256 amount) external isSolvent {
+    function withdraw(address to, uint256 amount) external lock isSolvent {
         _withdraw(_msgSender(), to, to, amount);
     }
 
-    function borrow(address to, uint256 amount) external isSolvent {
+    function borrow(address to, uint256 amount) external lock isSolvent {
         _borrow(to, amount);
     }
 
-    function repay(address account, uint256 amount) external {
+    function repay(address account, uint256 amount) external lock {
         _repay(account, amount);
     }
 
@@ -285,6 +343,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      */
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
         external
+        lock
     {
         bool checkForSolvency;
 
@@ -319,9 +378,8 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @param accounts The  list of accounts to be liquidated.
      * @param principals The amount of principal the `msg.sender` wants to liquidate for each account.
      * @param recipient The address that will receive the proceeds gained by liquidating.
-     * @param path0 The list of tokens from collateral to dinero in case the `msg.sender` wishes to use collateral to cover the debt.
-     * Or The list of tokens to sell the token0 if `COLLATERAL` is a PCS pair {IERC20}.
-     * @param path1 The list of tokens to sell the token1 if `COLLATERAL` is a PCS pair {IERC20}.
+     * @param data arbitrary data to be passed to the swap contract
+     * @param swapContract The address of the liquidator contract designed to sell the collateral
      *
      * Requirements:
      *
@@ -332,9 +390,9 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address[] calldata accounts,
         uint256[] calldata principals,
         address recipient,
-        Route[] calldata path0,
-        Route[] calldata path1
-    ) external {
+        bytes calldata data,
+        address swapContract
+    ) external lock {
         // Liquidations must be based on the current exchange rate.
         uint256 _exchangeRate = ORACLE.getIPXLPTokenUSDPrice(
             address(COLLATERAL),
@@ -345,8 +403,6 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         // Save state to memory for gas saving
 
         LiquidationInfo memory liquidationInfo;
-
-        uint256 _liquidationFee = liquidationFee;
 
         // Loop through all positions
         for (uint256 i; i < accounts.length; i = i.uAdd(1)) {
@@ -372,7 +428,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             }
 
             // Calculate the collateralFee (for the liquidator and the protocol)
-            uint256 fee = principal.fmul(_liquidationFee);
+            uint256 fee = principal.fmul(liquidationFee);
 
             // How much collateral is needed to cover the loan + fees.
             // Since Dinero is always USD we can calculate this way.
@@ -407,21 +463,21 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             // Update Global state
             totalPrincipal -= liquidationInfo.allPrincipal;
             // Update the total collateral amount.
-            totalAmount -= liquidationInfo.allCollateral;
+            totalAmount -= liquidationInfo.allCollateral.toUint128();
         }
 
         // 10% of the liquidation fee to be given to the protocol.
         uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
 
         // Liquidator can choose to sell or receive the collateral
-        if (path0.length != 0 && path1.length != 0) {
+        if (address(0) != swapContract) {
             // Sell `COLLATERAL` and send trade final token to recipient.
             // Abstracted the logic to a function to avoid; Stack too deep compiler error.
             _sellCollateral(
+                data,
                 liquidationInfo.allCollateral,
-                recipient,
-                path0,
-                path1
+                liquidationInfo.allPrincipal,
+                swapContract
             );
 
             // This step we destroy `DINERO` equivalent to all outstanding debt + protocol fee. This does not include the liquidator fee.
@@ -459,9 +515,9 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @param amount The number of IPX to send.
      */
     function _safeIPXTransfer(address to, uint256 amount) internal {
-        uint256 balace = _getIPXBalance();
+        uint256 balance = _getIPXBalance();
 
-        IPX.safeTransfer(to, amount >= balace ? balace : amount);
+        IPX.safeTransfer(to, balance.min(amount));
     }
 
     /**
@@ -538,7 +594,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (address(0) == to) revert LPFreeMarket__InvalidAddress();
 
         // Save storage state in memory to save gas.
-        LPFreeMarketUser memory user = userAccount[to];
+        Account memory user = userAccount[to];
 
         uint256 _totalAmount = totalAmount;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
@@ -582,7 +638,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         // Update Global state
         userAccount[to] = user;
-        totalAmount = _totalAmount;
+        totalAmount = _totalAmount.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
         emit Deposit(_msgSender(), to, amount);
@@ -597,7 +653,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (0 == amount) revert LPFreeMarket__InvalidAmount();
 
         // Save storage state in memory to save gas.
-        LPFreeMarketUser memory user = userAccount[from];
+        Account memory user = userAccount[from];
 
         if (amount > user.collateral)
             revert LPFreeMarket__InvalidWithdrawAmount();
@@ -653,7 +709,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             // Reset totalRewardsPerAmount if the pool is totally empty
             totalRewardsPerToken = _totalRewardsPerToken;
             user.rewardDebt = _totalRewardsPerToken.fmul(user.collateral);
-            totalAmount = _totalAmount;
+            totalAmount = _totalAmount.toUint128();
         } else {
             // If the Vault does not have any {STAKING_TOKEN}, reset the global state.
             totalAmount = 0;
@@ -677,7 +733,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @param amount The number of `DINERO` to borrow
      */
     function _borrow(address to, uint256 amount) internal {
-        totalPrincipal += amount;
+        totalPrincipal += amount.toUint128();
 
         if (totalPrincipal > maxBorrowAmount)
             revert LPFreeMarket__MaxBorrowAmountReached();
@@ -705,7 +761,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         userPrincipal[account] -= amount;
 
         unchecked {
-            totalPrincipal -= amount;
+            totalPrincipal -= amount.toUint128();
         }
 
         emit Repay(_msgSender(), account, amount);
@@ -788,10 +844,13 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     function _removeLiquidity(IRouter router, uint256 collateralAmount)
         private
-        returns (uint256 amount0, uint256 amount1)
+        returns (
+            address token0,
+            address token1,
+            uint256 amount0,
+            uint256 amount1
+        )
     {
-        address token0;
-        address token1;
         bool stable;
 
         {
@@ -820,52 +879,39 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @notice Slippage is not an issue because on {liquidate} we always burn the necessary amount of `DINERO`.
      * @notice We are only  using highly liquid pairs. So slippage should not be an issue. Front-running can be an issue, but the liquidation fee should cover it. It will be between 10%-15% (minus 10% for the protocol) of the debt liquidated.
      *
+     * @param data arbitrary data to be passed to the swapContract
      * @param collateralAmount The amount of tokens to remove from the DEX.
-     * @param recipient The address that will receive the tokens after the swap.
-     * @param path0 The swap route for token0 of the pair {COLLATERAL}.
-     * @param path1 The swap route for token1 of the pair {COLLATERAL}.
+     * @param principal The amount of DNR to be burned
+     * @param swapContract The liquidator address to sell the collateral
      */
     function _sellCollateral(
+        bytes calldata data,
         uint256 collateralAmount,
-        address recipient,
-        Route[] calldata path0,
-        Route[] calldata path1
+        uint256 principal,
+        address swapContract
     ) private {
         IRouter router = ROUTER;
 
         // Even if one of the tokens is WBNB. We dont want BNB because we want to use {swapExactTokensForTokens} for Dinero after.
         // Avoids unecessary routing through WBNB {deposit} and {withdraw}.
-        (uint256 amount0, uint256 amount1) = _removeLiquidity(
-            router,
-            collateralAmount
-        );
+        (
+            address token0,
+            address token1,
+            uint256 amount0,
+            uint256 amount1
+        ) = _removeLiquidity(router, collateralAmount);
 
-        router.swapExactTokensForTokens(
-            // Sell all token0 removed from the liquidity.
+        // Send tokens to the swap contract
+        IERC20Upgradeable(token0).safeTransfer(swapContract, amount0);
+        IERC20Upgradeable(token1).safeTransfer(swapContract, amount1);
+
+        ISwap(swapContract).sellTwoTokens(
+            data,
+            token0,
+            token1,
             amount0,
-            // The liquidator will pay for the slippage.
-            0,
-            // Sell token0 -> ... -> DINERO
-            path0,
-            // Send DINERO to the recipient. Since this has to happen in this block. We can burn right after
-            recipient,
-            // This TX must happen in this block.
-            //solhint-disable-next-line not-rely-on-time
-            block.timestamp
-        );
-
-        router.swapExactTokensForTokens(
-            // Sell all token1 obtained from removing the liquidity.
             amount1,
-            // The liquidator will pay for the slippage.
-            0,
-            // Sell token1 -> ... -> DINERO
-            path1,
-            // Send DINERO to the recipient. Since this has to happen in this block. We can burn right after
-            recipient,
-            // This TX must happen in this block.
-            //solhint-disable-next-line not-rely-on-time
-            block.timestamp
+            principal
         );
     }
 
@@ -886,7 +932,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      */
     function setMaxLTVRatio(uint256 amount) external onlyOwner {
         if (amount > 0.9e8) revert LPFreeMarket__InvalidMaxLTVRatio();
-        maxLTVRatio = amount;
+        maxLTVRatio = amount.toUint128();
         emit MaxTVLRatio(amount);
     }
 
@@ -903,7 +949,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      */
     function setLiquidationFee(uint256 amount) external onlyOwner {
         if (amount > 0.15e18) revert LPFreeMarket__InvalidLiquidationFee();
-        liquidationFee = amount;
+        liquidationFee = amount.toUint96();
         emit LiquidationFee(amount);
     }
 
@@ -919,12 +965,12 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * - Function can only be called by the {owner}
      */
     function setMaxBorrowAmount(uint256 amount) external onlyOwner {
-        maxBorrowAmount = amount;
+        maxBorrowAmount = amount.toUint128();
         emit MaxBorrowAmount(amount);
     }
 
     /**
-     * @dev A hook to guard the address that can update the implementation of this contract. It must have the {DEVELOPER_ROLE}.
+     * @dev A hook to guard the address that can update the implementation of this contract. It must be the owner.
      */
     function _authorizeUpgrade(address)
         internal
