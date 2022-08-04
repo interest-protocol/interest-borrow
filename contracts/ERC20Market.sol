@@ -4,32 +4,33 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@interest-protocol/dex/lib/DataTypes.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
 
+import "@interest-protocol/library/MathLib.sol";
+import "@interest-protocol/library/SafeCastLib.sol";
+import "@interest-protocol/library/RebaseLib.sol";
+import "@interest-protocol/library/SafeTransferErrors.sol";
+import "@interest-protocol/library/SafeTransferLib.sol";
+
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
-import "./lib/FixedPointMath.sol";
-import "./lib/Math.sol";
-import "./lib/Rebase.sol";
-import "./lib/SafeCast.sol";
-import "./lib/UncheckedMath.sol";
-
-contract ERC20Market is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract ERC20Market is
+    Initializable,
+    SafeTransferErrors,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     /*///////////////////////////////////////////////////////////////
                                   LIBS
     //////////////////////////////////////////////////////////////*/
 
-    using RebaseLibrary for Rebase;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using FixedPointMath for uint256;
-    using Math for uint256;
-    using SafeCast for uint256;
-    using UncheckedMath for uint256;
+    using RebaseLib for Rebase;
+    using SafeTransferLib for address;
+    using MathLib for uint256;
+    using SafeCastLib for uint256;
 
     /*///////////////////////////////////////////////////////////////
                                 EVENTS
@@ -153,7 +154,7 @@ contract ERC20Market is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                        STORAGE  SLOT 3                            */
 
     // Dinero address
-    IERC20Upgradeable public COLLATERAL;
+    address public COLLATERAL;
 
     // A fee that will be charged as a penalty of being liquidated.
     uint96 public liquidationFee;
@@ -227,7 +228,7 @@ contract ERC20Market is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _initializeContracts(bytes memory data) private {
         (DNR, COLLATERAL, ORACLE, treasury) = abi.decode(
             data,
-            (IDinero, IERC20Upgradeable, IPriceOracle, address)
+            (IDinero, address, IPriceOracle, address)
         );
     }
 

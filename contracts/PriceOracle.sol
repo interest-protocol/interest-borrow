@@ -6,20 +6,17 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
 import "@interest-protocol/dex/interfaces/IPair.sol";
-
-import "./interfaces/AggregatorV3Interface.sol";
-
-import "./lib/FixedPointMath.sol";
-import "./lib/Math.sol";
+import "@interest-protocol/library/MathLib.sol";
 
 contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /*///////////////////////////////////////////////////////////////
                             LIBRARIES
     //////////////////////////////////////////////////////////////*/
 
-    using Math for uint256;
-    using FixedPointMath for uint256;
+    using MathLib for uint256;
 
     /*///////////////////////////////////////////////////////////////
                               STATE

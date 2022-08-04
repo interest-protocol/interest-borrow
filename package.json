@@ -40,8 +40,10 @@
     "rimraf": "^3.0.2"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.4.2",
     "@interest-protocol/dex": "^1.0.2",
     "@interest-protocol/earn": "^1.2.0",
+    "@interest-protocol/library": "^1.2.1",
     "@interest-protocol/tokens": "^1.1.0",
     "@openzeppelin/contracts": "^4.7.1",
     "@openzeppelin/contracts-upgradeable": "^4.7.1",

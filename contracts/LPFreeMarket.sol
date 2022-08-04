@@ -4,33 +4,32 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@interest-protocol/dex/lib/DataTypes.sol";
-import "@interest-protocol/dex/interfaces/IRouter.sol";
 import "@interest-protocol/dex/interfaces/IPair.sol";
+import "@interest-protocol/dex/interfaces/IRouter.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
 import "@interest-protocol/earn/interfaces/ICasaDePapel.sol";
+import "@interest-protocol/library/MathLib.sol";
+import "@interest-protocol/library/SafeCastLib.sol";
+import "@interest-protocol/library/SafeTransferErrors.sol";
+import "@interest-protocol/library/SafeTransferLib.sol";
 
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
-import "./lib/FixedPointMath.sol";
-import "./lib/Math.sol";
-import "./lib/SafeCast.sol";
-import "./lib/UncheckedMath.sol";
-
-contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract LPFreeMarket is
+    Initializable,
+    SafeTransferErrors,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     /*///////////////////////////////////////////////////////////////
                                   LIBS
     //////////////////////////////////////////////////////////////*/
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using FixedPointMath for uint256;
-    using Math for uint256;
-    using SafeCast for uint256;
-    using UncheckedMath for uint256;
+    using SafeTransferLib for address;
+    using MathLib for uint256;
+    using SafeCastLib for uint256;
 
     /*///////////////////////////////////////////////////////////////
                                 EVENTS
@@ -131,7 +130,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                        STORAGE  SLOT 2                            */
 
     // Dinero address
-    IERC20Upgradeable public COLLATERAL;
+    address public COLLATERAL;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
@@ -154,7 +153,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                        STORAGE  SLOT 5                            */
 
     // Governance token for Interest Protocol
-    IERC20Upgradeable public IPX;
+    address public IPX;
 
     // The current master chef farm being used.
     uint96 public POOL_ID;
@@ -231,14 +230,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _initializeContracts(bytes memory data) private {
         (ROUTER, DNR, COLLATERAL, IPX, ORACLE, CASA_DE_PAPEL) = abi.decode(
             data,
-            (
-                IRouter,
-                IDinero,
-                IERC20Upgradeable,
-                IERC20Upgradeable,
-                IPriceOracle,
-                ICasaDePapel
-            )
+            (IRouter, IDinero, address, address, IPriceOracle, ICasaDePapel)
         );
     }
 
@@ -552,7 +544,7 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @dev A helper function to get the current {IPX} balance in this vault.
      */
     function _getIPXBalance() internal view returns (uint256) {
-        return IPX.balanceOf(address(this));
+        return IERC20(IPX).balanceOf(address(this));
     }
 
     /**
@@ -902,8 +894,8 @@ contract LPFreeMarket is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         ) = _removeLiquidity(router, collateralAmount);
 
         // Send tokens to the swap contract
-        IERC20Upgradeable(token0).safeTransfer(swapContract, amount0);
-        IERC20Upgradeable(token1).safeTransfer(swapContract, amount1);
+        token0.safeTransfer(swapContract, amount0);
+        token1.safeTransfer(swapContract, amount1);
 
         ISwap(swapContract).sellTwoTokens(
             data,
