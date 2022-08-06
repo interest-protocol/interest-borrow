@@ -83,3 +83,21 @@ export function sqrt(value: BigNumber) {
   }
   return y;
 }
+
+export const MINTER_ROLE = ethers.utils.solidityKeccak256(
+  ['string'],
+  ['MINTER_ROLE']
+);
+
+export const DEVELOPER_ROLE = ethers.utils.solidityKeccak256(
+  ['string'],
+  ['DEVELOPER_ROLE']
+);
+
+export const DEPOSIT_REQUEST = 0;
+
+export const WITHDRAW_REQUEST = 1;
+
+export const BORROW_REQUEST = 2;
+
+export const REPAY_REQUEST = 3;

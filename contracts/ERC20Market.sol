@@ -43,6 +43,7 @@ contract ERC20Market is
     event Borrow(
         address indexed borrower,
         address indexed receiver,
+        uint256 principal,
         uint256 amount
     );
 
@@ -63,7 +64,9 @@ contract ERC20Market is
 
     event Accrue(uint256 accruedAmount);
 
-    event GetEarnings(address indexed treasury, uint256 amount);
+    event GetDineroEarnings(address indexed treasury, uint256 amount);
+
+    event GetCollateralEarnings(address indexed treasury, uint256 amount);
 
     event NewTreasury(address indexed newTreasury);
 
@@ -72,6 +75,7 @@ contract ERC20Market is
     event Liquidated(
         address indexed liquidator,
         address indexed debtor,
+        uint256 principal,
         uint256 debt,
         uint256 fee,
         uint256 collateralPaid
@@ -94,9 +98,10 @@ contract ERC20Market is
     }
 
     struct LoanTerms {
-        uint64 lastAccrued; // Last block in which we have calculated the total fees owed to the protocol.
-        uint64 interestRate; // INTEREST_RATE is charged per second and has a base unit of 1e18.
-        uint128 feesEarned; // How many fees have the protocol earned since the last time the {owner} has collected the fees.
+        uint128 lastAccrued; // Last block in which we have calculated the total fees owed to the protocol.
+        uint128 interestRate; // INTEREST_RATE is charged per second and has a base unit of 1e18.
+        uint128 dnrEarned; // How many fees have the protocol earned since the last time the {owner} has collected the fees.
+        uint128 collateralEarned;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -216,8 +221,6 @@ contract ERC20Market is
         external
         initializer
     {
-        _unlocked = 1;
-
         __Ownable_init();
 
         _initializeContracts(contracts);
@@ -238,7 +241,7 @@ contract ERC20Market is
             liquidationFee,
             maxBorrowAmount,
             loanTerms.interestRate
-        ) = abi.decode(data, (uint128, uint96, uint128, uint64));
+        ) = abi.decode(data, (uint128, uint96, uint128, uint128));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -265,15 +268,6 @@ contract ERC20Market is
         ) revert ERC20Market__InsolventCaller();
     }
 
-    // Basic nonreentrancy guard
-    uint256 private _unlocked;
-    modifier lock() {
-        if (_unlocked != 1) revert ERC20Market__Reentrancy();
-        _unlocked = 2;
-        _;
-        _unlocked = 1;
-    }
-
     /*///////////////////////////////////////////////////////////////
                         MUTATIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -281,20 +275,38 @@ contract ERC20Market is
     /**
      * @dev This function sends the collected fees by this market to the governor feeTo address.
      */
-    function getEarnings() external {
+    function getDineroEarnings() external {
         // Update the total debt, includes the {loan.feesEarned}.
         accrue();
 
-        uint128 earnings = loanTerms.feesEarned;
+        uint128 earnings = loanTerms.dnrEarned;
+
+        if (earnings == 0) return;
 
         // Reset to 0
-        loanTerms.feesEarned = 0;
+        loanTerms.dnrEarned = 0;
 
         // This can be minted. Because once users get liquidated or repay the loans. This amount will be burned (fees).
         // So it will keep the peg to USD. There must be always at bare minimum 1 USD in collateral to 1 Dinero in existence.
         DNR.mint(treasury, earnings);
 
-        emit GetEarnings(treasury, earnings);
+        emit GetDineroEarnings(treasury, earnings);
+    }
+
+    /**
+     * @dev This function collects the {COLLATERAL} earned from liquidations.
+     */
+    function getCollateralEarnings() external {
+        uint128 earnings = loanTerms.collateralEarned;
+
+        if (earnings == 0) return;
+
+        // Reset to 0
+        loanTerms.collateralEarned = 0;
+
+        COLLATERAL.safeTransfer(treasury, earnings);
+
+        emit GetCollateralEarnings(treasury, earnings);
     }
 
     /**
@@ -332,7 +344,7 @@ contract ERC20Market is
         }
 
         // Amount of tokens every borrower together owes the protocol
-        // By using {wadMul} at the end we get a higher precision
+        // By using {fmul} at the end we get a higher precision
         uint256 debt = (uint256(_loan.elastic) * terms.interestRate).fmul(
             elapsedTime
         );
@@ -340,7 +352,7 @@ contract ERC20Market is
         unchecked {
             // Should not overflow.
             // Debt will eventually be paid to treasury so we update the information here.
-            terms.feesEarned += debt.toUint128();
+            terms.dnrEarned += debt.toUint128();
         }
 
         // Update the total debt owed to the protocol
@@ -352,21 +364,21 @@ contract ERC20Market is
         emit Accrue(debt);
     }
 
-    function deposit(address to, uint256 amount) external lock {
+    function deposit(address to, uint256 amount) external {
         _deposit(to, amount);
     }
 
-    function withdraw(address to, uint256 amount) external lock isSolvent {
+    function withdraw(address to, uint256 amount) external isSolvent {
         accrue();
         _withdraw(to, amount);
     }
 
-    function borrow(address to, uint256 amount) external lock isSolvent {
+    function borrow(address to, uint256 amount) external isSolvent {
         accrue();
         _borrow(to, amount);
     }
 
-    function repay(address account, uint256 amount) external lock {
+    function repay(address account, uint256 amount) external {
         accrue();
         _repay(account, amount);
     }
@@ -379,7 +391,6 @@ contract ERC20Market is
      */
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
         external
-        lock
     {
         bool checkForSolvency;
         bool checkForAccrue;
@@ -412,16 +423,13 @@ contract ERC20Market is
     }
 
     /**
-     * @dev This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol
-     * @notice Liquidator can use collateral to close the position or must have enough dinero in this account.
-     * @notice Liquidators can only close a portion of an underwater position.
-     * @notice We do not require the  liquidator to use the collateral. If there are any "lost" tokens in the contract. Those can be use as well.
+     * @dev This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol. If the data parameter is not empty, we assume it is a contract with the function {sellOneToken(bytes,address,uint256,uinnt256)}
+     * @notice Liquidator can use collateral to close the position or must have enough dinero in this account. Liquidators can only close a portion of an underwater position. We do not require the  liquidator to use the collateral. If there are any "lost" tokens in the contract. Those can be use as well.
      *
      * @param accounts The  list of accounts to be liquidated.
      * @param principals The amount of principal the `msg.sender` wants to liquidate for each account.
      * @param recipient The address that will receive the proceeds gained by liquidating.
      * @param data Arbitrary data to be passed to the swapContract
-     * @param swapContract Liquidator contract to sell the collateral
      *
      * Requirements:
      *
@@ -432,14 +440,12 @@ contract ERC20Market is
         address[] calldata accounts,
         uint256[] calldata principals,
         address recipient,
-        bytes calldata data,
-        address swapContract
-    ) external lock {
+        bytes calldata data
+    ) external {
         // Liquidations must be based on the current exchange rate.
         uint256 _exchangeRate = ORACLE.getTokenUSDPrice(
             address(COLLATERAL),
-            // Interest DEX LP tokens have 18 decimals
-            1 ether
+            1 ether // Price of one token
         );
 
         // Need all debt to be up to date
@@ -460,34 +466,24 @@ contract ERC20Market is
 
             Account memory _userAccount = userAccount[account];
 
-            uint256 principal;
+            // Liquidator cannot repay more than the what `account` borrowed.
+            // Note the liquidator does not need to close the full position.
+            uint256 principal = principals[i].min(_userAccount.principal);
 
-            {
-                // How much principal the user has borrowed.
-                uint256 loanPrincipal = userAccount[account].principal;
+            // Update the userLoan global state
+            _userAccount.principal -= principal.toUint128();
 
-                // Liquidator cannot repay more than the what `account` borrowed.
-                // Note the liquidator does not need to close the full position.
-                principal = principals[i] > loanPrincipal
-                    ? loanPrincipal
-                    : principals[i];
-
-                // Update the userLoan global state
-                _userAccount.principal -= principal.toUint128();
-            }
-
-            // We need to round up in favor of always burning more DNR to keep the peg.
+            // We round up to give an edge to the protocol and liquidator.
             uint256 debt = _loan.toElastic(principal, true);
-
-            // Calculate the collateralFee (for the liquidator and the protocol)
-            uint256 fee = debt.fmul(liquidationFee);
 
             // How much collateral is needed to cover the loan + fees.
             // Since Dinero is always USD we can calculate this way.
-            uint256 collateralToCover = (debt + fee).fdiv(_exchangeRate);
+            uint256 collateralToCover = debt.fdiv(_exchangeRate);
+            // Calculate the collateralFee (for the liquidator and the protocol)
+            uint256 fee = collateralToCover.fmul(liquidationFee);
 
             // Remove the collateral from the account. We can consider the debt paid.
-            _userAccount.collateral -= (collateralToCover).toUint128();
+            _userAccount.collateral -= (collateralToCover + fee).toUint128();
 
             // Update global state
             userAccount[account] = _userAccount;
@@ -495,6 +491,7 @@ contract ERC20Market is
             emit Liquidated(
                 _msgSender(),
                 account,
+                principal,
                 debt,
                 fee,
                 collateralToCover
@@ -507,9 +504,7 @@ contract ERC20Market is
             liquidationInfo.allFee += fee.toUint128();
         }
 
-        // There must have liquidations or we throw an error;
-        // We throw an error instead of returning because we already changed state, sent events and withdrew tokens from collateral.
-        // We need to revert all that.
+        // There must have liquidations or we revert to not waste anymore gas.
         if (liquidationInfo.allPrincipal == 0)
             revert ERC20Market__InvalidLiquidationAmount();
 
@@ -522,32 +517,27 @@ contract ERC20Market is
         // 10% of the liquidation fee to be given to the protocol.
         uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
 
-        // If there is no swap contract we simply send the collateral to the user
-        if (swapContract == address(0)) {
-            COLLATERAL.safeTransfer(recipient, liquidationInfo.allCollateral);
+        loanTerms.collateralEarned = uint256(loanTerms.collateralEarned)
+            .uAdd(protocolFee)
+            .toUint128();
 
-            // This step we destroy `DINERO` equivalent to all outstanding debt + protocol fee. This does not include the liquidator fee.
-            // Liquidator keeps the rest as profit.
-            // Liquidator recipient Dinero from the swap.
-            DNR.burn(_msgSender(), liquidationInfo.allDebt + protocolFee);
-        } else {
-            COLLATERAL.safeTransfer(
-                swapContract,
-                liquidationInfo.allCollateral
-            );
+        uint256 liquidatorAmount = liquidationInfo.allCollateral +
+            liquidationInfo.allFee -
+            protocolFee;
 
-            ISwap(swapContract).sellOneToken(
+        COLLATERAL.safeTransfer(recipient, liquidatorAmount);
+
+        // If the {msg.sender} calls this function with data, we assume the recipint is a contract that implements the {sellOneToken} from the ISwap interface.
+        if (data.length != 0)
+            ISwap(recipient).sellOneToken(
                 data,
                 address(COLLATERAL),
-                liquidationInfo.allCollateral,
-                liquidationInfo.allDebt + protocolFee
+                liquidatorAmount,
+                liquidationInfo.allDebt
             );
 
-            // This step we destroy `DINERO` equivalent to all outstanding debt + protocol fee. This does not include the liquidator fee.
-            // Liquidator keeps the rest as profit.
-            // Liquidator recipient Dinero from the swap.
-            DNR.burn(_msgSender(), liquidationInfo.allDebt + protocolFee);
-        }
+        // This step we destroy `DINERO` equivalent to all outstanding debt. This does not include the liquidator fee.
+        DNR.burn(_msgSender(), liquidationInfo.allDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -623,7 +613,7 @@ contract ERC20Market is
         // Note the `msg.sender` can use his collateral to lend to someone else.
         DNR.mint(to, amount);
 
-        emit Borrow(_msgSender(), to, amount);
+        emit Borrow(_msgSender(), to, principal, amount);
     }
 
     /**
@@ -725,7 +715,7 @@ contract ERC20Market is
      *
      */
     function setMaxLTVRatio(uint256 amount) external onlyOwner {
-        if (amount > 0.9e8) revert ERC20Market__InvalidMaxLTVRatio();
+        if (amount > 0.9e18) revert ERC20Market__InvalidMaxLTVRatio();
         maxLTVRatio = amount.toUint64();
         emit MaxTVLRatio(amount);
     }
@@ -760,8 +750,8 @@ contract ERC20Market is
      */
     function setInterestRate(uint256 amount) external onlyOwner {
         // 13e8 * 60 * 60 * 24 * 365 / 1e18 = ~ 0.0409968
-        if (amount >= 13e8) revert ERC20Market__InvalidInterestRate();
-        loanTerms.interestRate = amount.toUint64();
+        if (amount > 13e8) revert ERC20Market__InvalidInterestRate();
+        loanTerms.interestRate = amount.toUint128();
         emit InterestRate(amount);
     }
 
