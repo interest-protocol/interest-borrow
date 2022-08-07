@@ -60,6 +60,10 @@ contract LPFreeMarket is
 
     event Compound(uint256 rewards, uint256 fee);
 
+    event GetCollateralEarnings(address indexed treasury, uint256 amount);
+
+    event NewTreasury(address indexed newTreasury);
+
     /*///////////////////////////////////////////////////////////////
                                   ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -200,6 +204,20 @@ contract LPFreeMarket is
 
     //////////////////////////////////////////////////////////////
 
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 11                            */
+
+    uint256 public collateralEarnings;
+
+    //////////////////////////////////////////////////////////////
+
+    /*//////////////////////////////////////////////////////////////
+                       STORAGE  SLOT 12                            */
+
+    address public treasury;
+
+    //////////////////////////////////////////////////////////////
+
     /*///////////////////////////////////////////////////////////////
                             INITIALIZER
     //////////////////////////////////////////////////////////////*/
@@ -228,10 +246,19 @@ contract LPFreeMarket is
     }
 
     function _initializeContracts(bytes memory data) private {
-        (ROUTER, DNR, COLLATERAL, IPX, ORACLE, CASA_DE_PAPEL) = abi.decode(
-            data,
-            (IRouter, IDinero, address, address, IPriceOracle, ICasaDePapel)
-        );
+        (ROUTER, DNR, COLLATERAL, IPX, ORACLE, CASA_DE_PAPEL, treasury) = abi
+            .decode(
+                data,
+                (
+                    IRouter,
+                    IDinero,
+                    address,
+                    address,
+                    IPriceOracle,
+                    ICasaDePapel,
+                    address
+                )
+            );
     }
 
     function _initializeSettings(bytes memory data) private {
@@ -265,18 +292,25 @@ contract LPFreeMarket is
         ) revert LPFreeMarket__InsolventCaller();
     }
 
-    // Basic nonreentrancy guard
-    uint256 private _unlocked = 1;
-    modifier lock() {
-        if (_unlocked != 1) revert LPFreeMarket__Reentrancy();
-        _unlocked = 2;
-        _;
-        _unlocked = 1;
-    }
-
     /*///////////////////////////////////////////////////////////////
                         MUTATIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev This function collects the {COLLATERAL} earned from liquidations.
+     */
+    function getCollateralEarnings() external {
+        uint256 earnings = collateralEarnings;
+
+        if (earnings == 0) return;
+
+        // Reset to 0
+        collateralEarnings = 0;
+
+        COLLATERAL.safeTransfer(treasury, earnings);
+
+        emit GetCollateralEarnings(treasury, earnings);
+    }
 
     /**
      * @dev This function compounds the {IPX} rewards in the pool id 0 and rewards the caller with 2% of the pending rewards.
@@ -311,19 +345,19 @@ contract LPFreeMarket is
         emit Compound(rewards, fee);
     }
 
-    function deposit(address to, uint256 amount) external lock {
+    function deposit(address to, uint256 amount) external {
         _deposit(to, amount);
     }
 
-    function withdraw(address to, uint256 amount) external lock isSolvent {
+    function withdraw(address to, uint256 amount) external isSolvent {
         _withdraw(_msgSender(), to, to, amount);
     }
 
-    function borrow(address to, uint256 amount) external lock isSolvent {
+    function borrow(address to, uint256 amount) external isSolvent {
         _borrow(to, amount);
     }
 
-    function repay(address account, uint256 amount) external lock {
+    function repay(address account, uint256 amount) external {
         _repay(account, amount);
     }
 
@@ -335,7 +369,6 @@ contract LPFreeMarket is
      */
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
         external
-        lock
     {
         bool checkForSolvency;
 
@@ -366,12 +399,12 @@ contract LPFreeMarket is
      * @notice Liquidator can use collateral to close the position or must have enough dinero in this account.
      * @notice Liquidators can only close a portion of an underwater position.
      * @notice We do not require the  liquidator to use the collateral. If there are any "lost" tokens in the contract. Those can be use as well.
+     * @notice If a data is passed, the recipient is assumed to implement the interface {ISwap}.
      *
      * @param accounts The  list of accounts to be liquidated.
      * @param principals The amount of principal the `msg.sender` wants to liquidate for each account.
      * @param recipient The address that will receive the proceeds gained by liquidating.
-     * @param data arbitrary data to be passed to the swap contract
-     * @param swapContract The address of the liquidator contract designed to sell the collateral
+     * @param data arbitrary data to be passed to recipient.
      *
      * Requirements:
      *
@@ -382,9 +415,8 @@ contract LPFreeMarket is
         address[] calldata accounts,
         uint256[] calldata principals,
         address recipient,
-        bytes calldata data,
-        address swapContract
-    ) external lock {
+        bytes calldata data
+    ) external {
         // Liquidations must be based on the current exchange rate.
         uint256 _exchangeRate = ORACLE.getIPXLPTokenUSDPrice(
             address(COLLATERAL),
@@ -403,31 +435,29 @@ contract LPFreeMarket is
             // If the user has enough collateral to cover his debt. He cannot be liquidated. Move to the next one.
             if (_isSolvent(account, _exchangeRate)) continue;
 
-            uint256 principal;
+            // How much principal the user has borrowed.
+            uint256 loanPrincipal = userPrincipal[account];
 
-            {
-                // How much principal the user has borrowed.
-                uint256 loanPrincipal = userPrincipal[account];
+            // Liquidator cannot repay more than the what `account` borrowed.
+            // Note the liquidator does not need to close the full position.
+            uint256 principal = principals[i].min(loanPrincipal);
 
-                // Liquidator cannot repay more than the what `account` borrowed.
-                // Note the liquidator does not need to close the full position.
-                principal = principals[i] > loanPrincipal
-                    ? loanPrincipal
-                    : principals[i];
-
+            unchecked {
+                // The minimum value is it's own value. So this can never underflow.
                 // Update the userLoan global state
-                userPrincipal[account] -= principal;
+                userPrincipal[account] -= principal.toUint128();
             }
 
-            // Calculate the collateralFee (for the liquidator and the protocol)
-            uint256 fee = principal.fmul(liquidationFee);
-
-            // How much collateral is needed to cover the loan + fees.
+            // How much collateral is needed to cover the loan.
             // Since Dinero is always USD we can calculate this way.
-            uint256 collateralToCover = (principal + fee).fdiv(_exchangeRate);
+            uint256 collateralToCover = principal.fdiv(_exchangeRate);
+
+            // Calculate the collateralFee (for the liquidator and the protocol)
+            uint256 fee = collateralToCover.fmul(liquidationFee);
 
             // Remove the collateral from the account. We can consider the debt paid.
-            userAccount[account].collateral -= (collateralToCover).toUint128();
+            userAccount[account].collateral -= (collateralToCover + fee)
+                .toUint128();
 
             // Get the Rewards and collateral if they are in a vault to this contract.
             // The rewards go to the `account`.
@@ -461,29 +491,33 @@ contract LPFreeMarket is
         // 10% of the liquidation fee to be given to the protocol.
         uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
 
-        // Liquidator can choose to sell or receive the collateral
-        if (address(0) != swapContract) {
-            // Sell `COLLATERAL` and send trade final token to recipient.
+        unchecked {
+            // Collect the protocol fee.
+            collateralEarnings += protocolFee;
+        }
+
+        uint256 liquidatorAmount = liquidationInfo.allCollateral +
+            liquidationInfo.allFee -
+            protocolFee;
+
+        // If any  data is passed, we assume the recipient is a swap contract.
+        if (data.length > 0) {
+            // Remove the liquidity to obtain token0 and token1 and send to the recipient.
+            // Liquidator receives his reward in collateral.
             // Abstracted the logic to a function to avoid; Stack too deep compiler error.
             _sellCollateral(
                 data,
-                liquidationInfo.allCollateral,
+                liquidatorAmount,
                 liquidationInfo.allPrincipal,
-                swapContract
+                recipient
             );
-
-            // This step we destroy `DINERO` equivalent to all outstanding debt + protocol fee. This does not include the liquidator fee.
-            // Liquidator keeps the rest as profit.
-            // Liquidator recipient Dinero from the swap.
-            DNR.burn(_msgSender(), liquidationInfo.allPrincipal + protocolFee);
         } else {
-            // This step we destroy `DINERO` equivalent to all outstanding debt + protocol fee. This does not include the liquidator fee.
-            // Liquidator keeps the rest as profit.
-            // Liquidator recipient Dinero from the swap.
-            DNR.burn(_msgSender(), liquidationInfo.allPrincipal + protocolFee);
-
-            COLLATERAL.safeTransfer(recipient, liquidationInfo.allCollateral);
+            // Send the collateral to the recipient.
+            COLLATERAL.safeTransfer(recipient, liquidatorAmount);
         }
+
+        // This step we destroy `DINERO` equivalent to all outstanding principal.
+        DNR.burn(_msgSender(), liquidationInfo.allPrincipal);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -771,6 +805,8 @@ contract LPFreeMarket is
         view
         returns (bool)
     {
+        if (exchangeRate == 0) revert LPFreeMarket__InvalidExchangeRate();
+
         // How much the user has borrowed.
         uint256 principal = userPrincipal[account];
 
@@ -782,8 +818,6 @@ contract LPFreeMarket is
 
         // Account has no collateral so he can not open any loans. He is insolvent.
         if (collateralAmount == 0) return false;
-
-        if (exchangeRate == 0) revert LPFreeMarket__InvalidExchangeRate();
 
         // All Loans are emitted in `DINERO` which is based on USD price
         // Collateral in USD * {maxLTVRatio} has to be greater than principal + interest rate accrued in DINERO which is pegged to USD
@@ -959,6 +993,20 @@ contract LPFreeMarket is
     function setMaxBorrowAmount(uint256 amount) external onlyOwner {
         maxBorrowAmount = amount.toUint128();
         emit MaxBorrowAmount(amount);
+    }
+
+    /**
+     * @dev Updates the treasury address.
+     *
+     * @param _treasury The new treasury.
+     *
+     * Requirements:
+     *
+     * - Function can only be called by the {owner}
+     */
+    function setTreasury(address _treasury) external onlyOwner {
+        treasury = _treasury;
+        emit NewTreasury(_treasury);
     }
 
     /**

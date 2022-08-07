@@ -101,3 +101,6 @@ export const WITHDRAW_REQUEST = 1;
 export const BORROW_REQUEST = 2;
 
 export const REPAY_REQUEST = 3;
+
+export const WRAPPED_NATIVE_TOKEN =
+  '0x2F472b32b8041E51e53EeC52e87c7060EA9C7eE8';

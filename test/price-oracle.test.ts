@@ -17,6 +17,7 @@ import {
   multiDeploy,
   sqrt,
   upgrade,
+  WRAPPED_NATIVE_TOKEN,
 } from './utils';
 
 const { parseEther } = ethers.utils;
@@ -36,7 +37,7 @@ async function deployFixture() {
         ['Ether', 'ETH'],
       ]
     ) as Promise<Array<MintableERC20>>,
-    deployUUPS('PriceOracle', []) as Promise<PriceOracle>,
+    deployUUPS('PriceOracle', [WRAPPED_NATIVE_TOKEN]) as Promise<PriceOracle>,
     deploy('BrokenPriceFeed', []) as Promise<BrokenPriceFeed>,
   ]);
 
@@ -77,15 +78,18 @@ describe('PriceOracle', function () {
     it('reverts if you try to initialize it after deployment', async () => {
       const { priceOracle } = await loadFixture(deployFixture);
 
-      await expect(priceOracle.initialize()).to.revertedWith(
-        'Initializable: contract is already initialized'
-      );
+      await expect(
+        priceOracle.initialize(WRAPPED_NATIVE_TOKEN)
+      ).to.revertedWith('Initializable: contract is already initialized');
     });
 
-    it('sets the owner', async () => {
+    it('initializes the data correctly', async () => {
       const { priceOracle, owner } = await loadFixture(deployFixture);
 
       expect(await priceOracle.owner()).to.be.equal(owner.address);
+      expect(await priceOracle.WRAPPED_NATIVE_TOKEN()).to.be.equal(
+        WRAPPED_NATIVE_TOKEN
+      );
     });
   });
 

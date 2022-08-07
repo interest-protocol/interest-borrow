@@ -17,7 +17,7 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
-contract ERC20Market is
+contract NativeTokenMarket is
     Initializable,
     SafeTransferErrors,
     OwnableUpgradeable,
@@ -108,29 +108,29 @@ contract ERC20Market is
                                   ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ERC20Market__InvalidMaxLTVRatio();
+    error NativeTokenMarket__InvalidMaxLTVRatio();
 
-    error ERC20Market__InvalidLiquidationFee();
+    error NativeTokenMarket__InvalidLiquidationFee();
 
-    error ERC20Market__MaxBorrowAmountReached();
+    error NativeTokenMarket__MaxBorrowAmountReached();
 
-    error ERC20Market__InvalidExchangeRate();
+    error NativeTokenMarket__InvalidExchangeRate();
 
-    error ERC20Market__InsolventCaller();
+    error NativeTokenMarket__InsolventCaller();
 
-    error ERC20Market__InvalidAmount();
+    error NativeTokenMarket__InvalidAmount();
 
-    error ERC20Market__InvalidAddress();
+    error NativeTokenMarket__InvalidAddress();
 
-    error ERC20Market__InvalidWithdrawAmount();
+    error NativeTokenMarket__InvalidWithdrawAmount();
 
-    error ERC20Market__InvalidRequest();
+    error NativeTokenMarket__InvalidRequest();
 
-    error ERC20Market__InvalidLiquidationAmount();
+    error NativeTokenMarket__InvalidLiquidationAmount();
 
-    error ERC20Market__InvalidInterestRate();
+    error NativeTokenMarket__InvalidInterestRate();
 
-    error ERC20Market__Reentrancy();
+    error NativeTokenMarket__Reentrancy();
 
     // NO MEMORY SLOT
     // Requests
@@ -147,26 +147,22 @@ contract ERC20Market is
 
     // Dinero address
     IDinero internal DNR;
+
+    // Basic nonreentrancy guard
+    uint96 private _unlocked;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 2                            */
 
     address public treasury;
-    //////////////////////////////////////////////////////////////
-
-    /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 3                            */
-
-    // Dinero address
-    address public COLLATERAL;
 
     // A fee that will be charged as a penalty of being liquidated.
     uint96 public liquidationFee;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 4                            */
+                       STORAGE  SLOT 3                            */
 
     // Contract uses Chainlink to obtain the price in USD with 18 decimals
     IPriceOracle internal ORACLE;
@@ -174,7 +170,7 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 5                            */
+                       STORAGE  SLOT 4                            */
 
     // Dinero Markets must have a max of how much DNR they can create to prevent liquidity issues during liquidations.
     uint128 public maxBorrowAmount;
@@ -184,21 +180,21 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 6                            */
+                       STORAGE  SLOT 5                            */
 
     Rebase public loan;
 
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 7                            */
+                       STORAGE  SLOT 6                            */
 
     LoanTerms public loanTerms;
 
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 8                            */
+                       STORAGE  SLOT 7                            */
 
     // How much principal an address has borrowed.
     mapping(address => Account) public userAccount;
@@ -226,12 +222,14 @@ contract ERC20Market is
         _initializeContracts(contracts);
 
         _initializeSettings(settings);
+
+        _unlocked = 1;
     }
 
     function _initializeContracts(bytes memory data) private {
-        (DNR, COLLATERAL, ORACLE, treasury) = abi.decode(
+        (DNR, ORACLE, treasury) = abi.decode(
             data,
-            (IDinero, address, IPriceOracle, address)
+            (IDinero, IPriceOracle, address)
         );
     }
 
@@ -259,13 +257,16 @@ contract ERC20Market is
         if (
             !_isSolvent(
                 _msgSender(),
-                ORACLE.getTokenUSDPrice(
-                    address(COLLATERAL),
-                    // Interest DEX LP tokens have 18 decimals
-                    1 ether
-                )
+                ORACLE.getNativeTokenUSDPrice(1 ether) // Price of one token
             )
-        ) revert ERC20Market__InsolventCaller();
+        ) revert NativeTokenMarket__InsolventCaller();
+    }
+
+    modifier lock() {
+        if (_unlocked != 1) revert NativeTokenMarket__Reentrancy();
+        _unlocked = 2;
+        _;
+        _unlocked = 1;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -304,7 +305,7 @@ contract ERC20Market is
         // Reset to 0
         loanTerms.collateralEarned = 0;
 
-        COLLATERAL.safeTransfer(treasury, earnings);
+        treasury.safeTransferNativeToken(earnings);
 
         emit GetCollateralEarnings(treasury, earnings);
     }
@@ -364,23 +365,28 @@ contract ERC20Market is
         emit Accrue(debt);
     }
 
-    function deposit(address to, uint256 amount) external {
-        _deposit(to, amount);
+    function deposit(address to) external payable {
+        _deposit(to, msg.value);
     }
 
-    function withdraw(address to, uint256 amount) external isSolvent {
+    function withdraw(address to, uint256 amount) external lock isSolvent {
         accrue();
         _withdraw(to, amount);
     }
 
-    function borrow(address to, uint256 amount) external isSolvent {
+    function borrow(address to, uint256 amount) external lock isSolvent {
         accrue();
         _borrow(to, amount);
     }
 
-    function repay(address account, uint256 amount) external {
+    function repay(address account, uint256 amount) external lock {
         accrue();
         _repay(account, amount);
+    }
+
+    // Accept direct native token transfers
+    receive() external payable {
+        _deposit(_msgSender(), msg.value);
     }
 
     /**
@@ -391,9 +397,12 @@ contract ERC20Market is
      */
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
         external
+        payable
+        lock
     {
         bool checkForSolvency;
         bool checkForAccrue;
+        uint256 value = msg.value;
 
         for (uint256 i; i < requests.length; i = i.uAdd(1)) {
             uint256 requestAction = requests[i];
@@ -406,6 +415,14 @@ contract ERC20Market is
             if (!checkForSolvency && _checkForSolvency(requestAction))
                 checkForSolvency = true;
 
+            if (requestAction == DEPOSIT_REQUEST) {
+                (, uint256 amount) = abi.decode(
+                    requestArgs[i],
+                    (address, uint256)
+                );
+                value -= amount;
+            }
+
             _request(requestAction, requestArgs[i]);
         }
 
@@ -413,17 +430,13 @@ contract ERC20Market is
             if (
                 !_isSolvent(
                     _msgSender(),
-                    ORACLE.getTokenUSDPrice(
-                        address(COLLATERAL),
-                        // Interest DEX LP tokens have 18 decimals
-                        1 ether
-                    )
+                    ORACLE.getNativeTokenUSDPrice(1 ether) // Price of one token
                 )
-            ) revert ERC20Market__InsolventCaller();
+            ) revert NativeTokenMarket__InsolventCaller();
     }
 
     /**
-     * @dev This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol. If the data parameter is not empty, we assume it is a contract with the function {sellOneToken(bytes,address,uint256,uint256)}
+     * @dev This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol. If the data parameter is not empty, we assume it is a contract with the function {sellNativeTokenbytes,uint256,uint256)}
      * @notice Liquidator can use collateral to close the position or must have enough dinero in this account. Liquidators can only close a portion of an underwater position. We do not require the  liquidator to use the collateral. If there are any "lost" tokens in the contract. Those can be use as well.
      *
      * @param accounts The  list of accounts to be liquidated.
@@ -441,10 +454,9 @@ contract ERC20Market is
         uint256[] calldata principals,
         address recipient,
         bytes calldata data
-    ) external {
+    ) external lock {
         // Liquidations must be based on the current exchange rate.
-        uint256 _exchangeRate = ORACLE.getTokenUSDPrice(
-            address(COLLATERAL),
+        uint256 _exchangeRate = ORACLE.getNativeTokenUSDPrice(
             1 ether // Price of one token
         );
 
@@ -509,7 +521,7 @@ contract ERC20Market is
 
         // There must have liquidations or we revert to not waste anymore gas.
         if (liquidationInfo.allPrincipal == 0)
-            revert ERC20Market__InvalidLiquidationAmount();
+            revert NativeTokenMarket__InvalidLiquidationAmount();
 
         // update global state
         loan = _loan.sub(
@@ -528,13 +540,12 @@ contract ERC20Market is
             liquidationInfo.allFee -
             protocolFee;
 
-        COLLATERAL.safeTransfer(recipient, liquidatorAmount);
+        recipient.safeTransferNativeToken(liquidatorAmount);
 
         // If the {msg.sender} calls this function with data, we assume the recipint is a contract that implements the {sellOneToken} from the ISwap interface.
         if (data.length != 0)
-            ISwap(recipient).sellOneToken(
+            ISwap(recipient).sellNativeToken(
                 data,
-                address(COLLATERAL),
                 liquidatorAmount,
                 liquidationInfo.allDebt
             );
@@ -572,11 +583,8 @@ contract ERC20Market is
     }
 
     function _deposit(address to, uint256 amount) internal {
-        if (0 == amount) revert ERC20Market__InvalidAmount();
-        if (address(0) == to) revert ERC20Market__InvalidAddress();
-
-        // We want to get the tokens before updating the state
-        COLLATERAL.safeTransferFrom(_msgSender(), address(this), amount);
+        if (0 == amount) revert NativeTokenMarket__InvalidAmount();
+        if (address(0) == to) revert NativeTokenMarket__InvalidAddress();
 
         userAccount[to].collateral += amount.toUint128();
 
@@ -584,11 +592,12 @@ contract ERC20Market is
     }
 
     function _withdraw(address to, uint256 amount) internal {
-        if (0 == amount) revert ERC20Market__InvalidAmount();
+        if (0 == amount) revert NativeTokenMarket__InvalidAmount();
 
         userAccount[_msgSender()].collateral -= amount.toUint128();
 
-        COLLATERAL.safeTransfer(to, amount);
+        //  We update the balance before sending, so we present reentrancy attacks.
+        to.safeTransferNativeToken(amount);
 
         emit Withdraw(_msgSender(), to, amount);
     }
@@ -607,7 +616,7 @@ contract ERC20Market is
         (loan, principal) = loan.add(amount, true);
 
         if (loan.elastic > maxBorrowAmount)
-            revert ERC20Market__MaxBorrowAmountReached();
+            revert NativeTokenMarket__MaxBorrowAmountReached();
 
         unchecked {
             userAccount[_msgSender()].principal += principal.toUint128();
@@ -653,7 +662,7 @@ contract ERC20Market is
         view
         returns (bool)
     {
-        if (exchangeRate == 0) revert ERC20Market__InvalidExchangeRate();
+        if (exchangeRate == 0) revert NativeTokenMarket__InvalidExchangeRate();
 
         // How much the user has borrowed.
         Account memory account = userAccount[user];
@@ -701,7 +710,7 @@ contract ERC20Market is
             return _repay(account, principal);
         }
 
-        revert ERC20Market__InvalidRequest();
+        revert NativeTokenMarket__InvalidRequest();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -720,7 +729,7 @@ contract ERC20Market is
      *
      */
     function setMaxLTVRatio(uint256 amount) external onlyOwner {
-        if (amount > 0.9e18) revert ERC20Market__InvalidMaxLTVRatio();
+        if (amount > 0.9e18) revert NativeTokenMarket__InvalidMaxLTVRatio();
         maxLTVRatio = amount.toUint64();
         emit MaxTVLRatio(amount);
     }
@@ -737,7 +746,7 @@ contract ERC20Market is
      *
      */
     function setLiquidationFee(uint256 amount) external onlyOwner {
-        if (amount > 0.15e18) revert ERC20Market__InvalidLiquidationFee();
+        if (amount > 0.15e18) revert NativeTokenMarket__InvalidLiquidationFee();
         liquidationFee = amount.toUint64();
         emit LiquidationFee(amount);
     }
@@ -755,7 +764,7 @@ contract ERC20Market is
      */
     function setInterestRate(uint256 amount) external onlyOwner {
         // 13e8 * 60 * 60 * 24 * 365 / 1e18 = ~ 0.0409968
-        if (amount > 13e8) revert ERC20Market__InvalidInterestRate();
+        if (amount > 13e8) revert NativeTokenMarket__InvalidInterestRate();
         loanTerms.interestRate = amount.toUint128();
         emit InterestRate(amount);
     }

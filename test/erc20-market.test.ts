@@ -27,6 +27,7 @@ import {
   REPAY_REQUEST,
   upgrade,
   WITHDRAW_REQUEST,
+  WRAPPED_NATIVE_TOKEN,
 } from './utils';
 
 const { parseEther, defaultAbiCoder } = ethers.utils;
@@ -47,7 +48,9 @@ async function deployFixture() {
     deployUUPS('Dinero', []) as Promise<Dinero>,
   ]);
 
-  const priceOracle: PriceOracle = await deployUUPS('PriceOracle', []);
+  const priceOracle: PriceOracle = await deployUUPS('PriceOracle', [
+    WRAPPED_NATIVE_TOKEN,
+  ]);
 
   const contractData = defaultAbiCoder.encode(
     ['address', 'address', 'address', 'address'],

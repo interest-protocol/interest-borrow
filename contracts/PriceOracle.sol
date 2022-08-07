@@ -22,6 +22,8 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                               STATE
     //////////////////////////////////////////////////////////////*/
 
+    address public WRAPPED_NATIVE_TOKEN;
+
     // Token Address -> Chainlink feed with USD base.
     mapping(address => AggregatorV3Interface) public getUSDFeed;
 
@@ -48,12 +50,16 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @param wrappedNativeToken The wrapped version of the native token.
+     *
      * Requirements:
      *
      * - Can only be called at once and should be called during creation to prevent front running.
      */
-    function initialize() external initializer {
+    function initialize(address wrappedNativeToken) external initializer {
         __Ownable_init();
+
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
     }
 
     /**
@@ -134,6 +140,30 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if (0 == amount) revert PriceOracle__InvalidAmount();
 
         AggregatorV3Interface feed = getUSDFeed[token];
+
+        if (address(0) == address(feed)) revert PriceOracle__MissingFeed();
+
+        (, int256 answer, , , ) = feed.latestRoundData();
+
+        price = _toUint256(answer).adjust(feed.decimals()).fmul(amount);
+    }
+
+    /**
+     * @notice It returns the USD value of the native token for an `amount`.
+     *
+     * @param amount The number of tokens to calculate the value in USD.
+     * @return price uint256 The price of the token in USD.
+     *
+     * @dev The return value has a scaling factor of 1/1e18. It will revert if Chainlink returns a value equal or lower than zero.
+     */
+    function getNativeTokenUSDPrice(uint256 amount)
+        external
+        view
+        returns (uint256 price)
+    {
+        if (0 == amount) revert PriceOracle__InvalidAmount();
+
+        AggregatorV3Interface feed = getUSDFeed[WRAPPED_NATIVE_TOKEN];
 
         if (address(0) == address(feed)) revert PriceOracle__MissingFeed();
 

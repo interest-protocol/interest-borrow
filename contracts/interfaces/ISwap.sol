@@ -17,4 +17,10 @@ interface ISwap {
         uint256 amount,
         uint256 debt
     ) external;
+
+    function sellNativeToken(
+        bytes calldata data,
+        uint256 amount,
+        uint256 debt
+    ) external;
 }
