@@ -86,10 +86,10 @@ contract NativeTokenMarket is
     //////////////////////////////////////////////////////////////*/
 
     struct LiquidationInfo {
-        uint128 allCollateral;
-        uint128 allDebt;
-        uint128 allPrincipal;
-        uint128 allFee;
+        uint256 allCollateral;
+        uint256 allDebt;
+        uint256 allPrincipal;
+        uint256 allFee;
     }
 
     struct Account {
@@ -278,7 +278,7 @@ contract NativeTokenMarket is
      */
     function getDineroEarnings() external {
         // Update the total debt, includes the {loan.feesEarned}.
-        accrue();
+        _accrue();
 
         uint128 earnings = loanTerms.dnrEarned;
 
@@ -313,56 +313,8 @@ contract NativeTokenMarket is
     /**
      * @dev Updates the total fees owed to the protocol and the new total borrowed with the new fees included.
      */
-    function accrue() public {
-        // Save gas save loan info to memory
-        LoanTerms memory terms = loanTerms;
-
-        // Variable to know how many blocks have passed since {loan.lastAccrued}.
-        uint256 elapsedTime;
-
-        unchecked {
-            // Should never overflow.
-            // Check how much time passed since the last we accrued interest
-            // solhint-disable-next-line not-rely-on-time
-            elapsedTime = block.timestamp - terms.lastAccrued;
-        }
-
-        // If no time has passed. There is nothing to do;
-        if (elapsedTime == 0) return;
-
-        // Update the lastAccrued time to this block
-        // solhint-disable-next-line not-rely-on-time
-        terms.lastAccrued = block.timestamp.toUint64();
-
-        // Save to memory the totalLoan information for gas optimization
-        Rebase memory _loan = loan;
-
-        // If there are no open loans. We do not need to update the fees.
-        if (_loan.base == 0 || terms.interestRate == 0) {
-            // Save the lastAccrued time to storage and return.
-            loanTerms = terms;
-            return;
-        }
-
-        // Amount of tokens every borrower together owes the protocol
-        // By using {fmul} at the end we get a higher precision
-        uint256 debt = (uint256(_loan.elastic) * terms.interestRate).fmul(
-            elapsedTime
-        );
-
-        unchecked {
-            // Should not overflow.
-            // Debt will eventually be paid to treasury so we update the information here.
-            terms.dnrEarned += debt.toUint128();
-        }
-
-        // Update the total debt owed to the protocol
-        _loan.elastic += debt.toUint128();
-        // Update the loan
-        loan = _loan;
-        loanTerms = terms;
-
-        emit Accrue(debt);
+    function accrue() external {
+        _accrue();
     }
 
     function deposit(address to) external payable {
@@ -370,17 +322,17 @@ contract NativeTokenMarket is
     }
 
     function withdraw(address to, uint256 amount) external lock isSolvent {
-        accrue();
+        _accrue();
         _withdraw(to, amount);
     }
 
     function borrow(address to, uint256 amount) external lock isSolvent {
-        accrue();
+        _accrue();
         _borrow(to, amount);
     }
 
     function repay(address account, uint256 amount) external lock {
-        accrue();
+        _accrue();
         _repay(account, amount);
     }
 
@@ -407,12 +359,12 @@ contract NativeTokenMarket is
         for (uint256 i; i < requests.length; i = i.uAdd(1)) {
             uint256 requestAction = requests[i];
 
-            if (!checkForAccrue && _checkForAccrue(requestAction)) {
-                accrue();
+            if (_checkForAccrue(requestAction) && !checkForAccrue) {
+                _accrue();
                 checkForAccrue = true;
             }
 
-            if (!checkForSolvency && _checkForSolvency(requestAction))
+            if (_checkForSolvency(requestAction) && !checkForSolvency)
                 checkForSolvency = true;
 
             if (requestAction == DEPOSIT_REQUEST) {
@@ -461,7 +413,7 @@ contract NativeTokenMarket is
         );
 
         // Need all debt to be up to date
-        accrue();
+        _accrue();
 
         // Save state to memory for gas saving
 
@@ -512,11 +464,10 @@ contract NativeTokenMarket is
                 collateralToCover
             );
 
-            // Update local information. It should not overflow max uint128.
-            liquidationInfo.allCollateral += collateralToCover.toUint128();
-            liquidationInfo.allPrincipal += principal.toUint128();
-            liquidationInfo.allDebt += debt.toUint128();
-            liquidationInfo.allFee += fee.toUint128();
+            liquidationInfo.allCollateral += collateralToCover;
+            liquidationInfo.allPrincipal += principal;
+            liquidationInfo.allDebt += debt;
+            liquidationInfo.allFee += fee;
         }
 
         // There must have liquidations or we revert to not waste anymore gas.
@@ -530,11 +481,13 @@ contract NativeTokenMarket is
         );
 
         // 10% of the liquidation fee to be given to the protocol.
-        uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
+        uint256 protocolFee = liquidationInfo.allFee.fmul(0.1e18);
 
-        loanTerms.collateralEarned = uint256(loanTerms.collateralEarned)
-            .uAdd(protocolFee)
-            .toUint128();
+        unchecked {
+            loanTerms.collateralEarned =
+                loanTerms.collateralEarned +
+                protocolFee.toUint128();
+        }
 
         uint256 liquidatorAmount = liquidationInfo.allCollateral +
             liquidationInfo.allFee -
@@ -677,7 +630,59 @@ contract NativeTokenMarket is
         // Collateral in USD * {maxLTVRatio} has to be greater than principal + interest rate accrued in DINERO which is pegged to USD
         return
             uint256(account.collateral).fmul(exchangeRate).fmul(maxLTVRatio) >=
-            account.principal;
+            loan.toElastic(account.principal, true);
+    }
+
+    function _accrue() internal {
+        // Save gas save loan info to memory
+        LoanTerms memory terms = loanTerms;
+
+        // Variable to know how many blocks have passed since {loan.lastAccrued}.
+        uint256 elapsedTime;
+
+        unchecked {
+            // Should never overflow.
+            // Check how much time passed since the last we accrued interest
+            // solhint-disable-next-line not-rely-on-time
+            elapsedTime = block.timestamp - terms.lastAccrued;
+        }
+
+        // If no time has passed. There is nothing to do;
+        if (elapsedTime == 0) return;
+
+        // Update the lastAccrued time to this block
+        // solhint-disable-next-line not-rely-on-time
+        terms.lastAccrued = block.timestamp.toUint64();
+
+        // Save to memory the totalLoan information for gas optimization
+        Rebase memory _loan = loan;
+
+        // If there are no open loans. We do not need to update the fees.
+        if (terms.interestRate == 0 || _loan.base == 0) {
+            // Save the lastAccrued time to storage and return.
+            loanTerms = terms;
+            return;
+        }
+
+        // Amount of tokens every borrower together owes the protocol
+        // By using {fmul} at the end we get a higher precision
+        uint256 debt = (uint256(_loan.elastic) * terms.interestRate).fmul(
+            elapsedTime
+        );
+
+        unchecked {
+            // Should not overflow.
+            // Debt will eventually be paid to treasury so we update the information here.
+            terms.dnrEarned += debt.toUint128();
+        }
+
+        // Update the total debt owed to the protocol
+        _loan.elastic += debt.toUint128();
+        // Update the loan
+        loan = _loan;
+        loanTerms = terms;
+
+        emit Accrue(debt);
     }
 
     /**
@@ -686,7 +691,7 @@ contract NativeTokenMarket is
      * @param requestAction The action associated to a function
      * @param data The arguments to be passed to the function
      */
-    function _request(uint256 requestAction, bytes calldata data) private {
+    function _request(uint256 requestAction, bytes calldata data) internal {
         if (requestAction == DEPOSIT_REQUEST) {
             (address to, uint256 amount) = abi.decode(data, (address, uint256));
             return _deposit(to, amount);

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "@interest-protocol/dex/lib/DataTypes.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
-
 import "@interest-protocol/library/MathLib.sol";
 import "@interest-protocol/library/SafeCastLib.sol";
 import "@interest-protocol/library/RebaseLib.sol";
@@ -85,11 +84,12 @@ contract ERC20Market is
                               STRUCTS
     //////////////////////////////////////////////////////////////*/
 
+    ///@notice we do not need to worry about packing the variables in this struct because it will only be used in memory.
     struct LiquidationInfo {
-        uint128 allCollateral;
-        uint128 allDebt;
-        uint128 allPrincipal;
-        uint128 allFee;
+        uint256 allCollateral;
+        uint256 allDebt;
+        uint256 allPrincipal;
+        uint256 allFee;
     }
 
     struct Account {
@@ -100,8 +100,8 @@ contract ERC20Market is
     struct LoanTerms {
         uint128 lastAccrued; // Last block in which we have calculated the total fees owed to the protocol.
         uint128 interestRate; // INTEREST_RATE is charged per second and has a base unit of 1e18.
-        uint128 dnrEarned; // How many fees have the protocol earned since the last time the {owner} has collected the fees.
-        uint128 collateralEarned;
+        uint128 dnrEarned; // How many fees have the protocol earned since the last time the {owner} has collected fees from the loan.
+        uint128 collateralEarned; // Fees collected from liquidations.
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -145,30 +145,31 @@ contract ERC20Market is
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 0                            */
 
-    // Dinero address
+    /// @notice Dinero address.
     IDinero internal DNR;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 2                            */
 
+    /// @notice Collects the fees accrued by this contract.
     address public treasury;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 3                            */
 
-    // Dinero address
+    /// @notice The address of the {ERC20} token accepted as collateral by this contract.
     address public COLLATERAL;
 
-    // A fee that will be charged as a penalty of being liquidated.
+    /// @notice The fee charged to depositors who have underwater positions during liquidation events.
     uint96 public liquidationFee;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 4                            */
 
-    // Contract uses Chainlink to obtain the price in USD with 18 decimals
+    /// @notice The address of the Interest Protocol Oracle, which uses Chainlink to obtain the price of the collateral token in USD with 18 decimals.
     IPriceOracle internal ORACLE;
 
     //////////////////////////////////////////////////////////////
@@ -176,16 +177,17 @@ contract ERC20Market is
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 5                            */
 
-    // Dinero Markets must have a max of how much DNR they can create to prevent liquidity issues during liquidations.
+    /// @notice Dinero Markets have a maximum amount of DNR they can create to prevent liquidity issues during liquidations. This value is the maximum amount of DNR that can be lent out.
     uint128 public maxBorrowAmount;
 
-    // principal + interest rate / collateral. If it is above this value, the user might get liquidated.
+    /// @notice (principal + interest rate) / collateral. If a user position is above this value, the user is at risk of being liquidated.
     uint128 public maxLTVRatio;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 6                            */
 
+    /// @notice This struct holds the current loan data. The elastic is the total of amount of DNR oweed.
     Rebase public loan;
 
     //////////////////////////////////////////////////////////////
@@ -211,20 +213,22 @@ contract ERC20Market is
 
     /**
      * Requirements:
-     *
+     * @notice It sets the initial data for the contract.
      * @param contracts addresses of contracts to intialize this market
      * @param settings several global state uint variables to initialize this market
      *
-     * - Can only be called at once and should be called during creation to prevent front running.
      */
     function initialize(bytes calldata contracts, bytes calldata settings)
         external
         initializer
     {
+        // Set the owner
         __Ownable_init();
 
+        // Set the contracts
         _initializeContracts(contracts);
 
+        // Set the initial settings.
         _initializeSettings(settings);
     }
 
@@ -249,21 +253,15 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Check if a user loan is below the {maxLTVRatio}.
-     *
-     * @notice This function requires this contract to be deployed in a blockchain with low TX fees. As calling an oracle can be quite expensive.
-     * @notice That the oracle is called in this function. In case of failure, liquidations, borrowing dinero and removing collateral will be disabled. Underwater loans will not be liquidated, but good news is that borrowing and removing collateral will remain closed.
+     * @notice Checks if a user loan is below the {maxLTVRatio}.
+     * @dev This modifier is called  after all state changes.
      */
     modifier isSolvent() {
         _;
         if (
             !_isSolvent(
                 _msgSender(),
-                ORACLE.getTokenUSDPrice(
-                    address(COLLATERAL),
-                    // Interest DEX LP tokens have 18 decimals
-                    1 ether
-                )
+                ORACLE.getTokenUSDPrice(address(COLLATERAL), 1 ether)
             )
         ) revert ERC20Market__InsolventCaller();
     }
@@ -273,20 +271,20 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev This function sends the collected fees by this market to the governor feeTo address.
+     * @notice This function sends the collected fees by this market to the governor feeTo address.
      */
     function getDineroEarnings() external {
         // Update the total debt, includes the {loan.feesEarned}.
-        accrue();
+        _accrue();
 
         uint128 earnings = loanTerms.dnrEarned;
 
         if (earnings == 0) return;
 
-        // Reset to 0
+        // Consider the fees collected.
         loanTerms.dnrEarned = 0;
 
-        // This can be minted. Because once users get liquidated or repay the loans. This amount will be burned (fees).
+        // This can be minted. Because once users repay the loans. This amount will be burned (fees).
         // So it will keep the peg to USD. There must be always at bare minimum 1 USD in collateral to 1 Dinero in existence.
         DNR.mint(treasury, earnings);
 
@@ -294,7 +292,7 @@ contract ERC20Market is
     }
 
     /**
-     * @dev This function collects the {COLLATERAL} earned from liquidations.
+     * @notice This function collects the {COLLATERAL} earned from liquidations.
      */
     function getCollateralEarnings() external {
         uint128 earnings = loanTerms.collateralEarned;
@@ -310,58 +308,10 @@ contract ERC20Market is
     }
 
     /**
-     * @dev Updates the total fees owed to the protocol and the new total borrowed with the new fees included.
+     * @notice Updates the total fees owed to the protocol and the new total borrowed with the new fees included.
      */
-    function accrue() public {
-        // Save gas save loan info to memory
-        LoanTerms memory terms = loanTerms;
-
-        // Variable to know how many blocks have passed since {loan.lastAccrued}.
-        uint256 elapsedTime;
-
-        unchecked {
-            // Should never overflow.
-            // Check how much time passed since the last we accrued interest
-            // solhint-disable-next-line not-rely-on-time
-            elapsedTime = block.timestamp - terms.lastAccrued;
-        }
-
-        // If no time has passed. There is nothing to do;
-        if (elapsedTime == 0) return;
-
-        // Update the lastAccrued time to this block
-        // solhint-disable-next-line not-rely-on-time
-        terms.lastAccrued = block.timestamp.toUint64();
-
-        // Save to memory the totalLoan information for gas optimization
-        Rebase memory _loan = loan;
-
-        // If there are no open loans. We do not need to update the fees.
-        if (_loan.base == 0 || terms.interestRate == 0) {
-            // Save the lastAccrued time to storage and return.
-            loanTerms = terms;
-            return;
-        }
-
-        // Amount of tokens every borrower together owes the protocol
-        // By using {fmul} at the end we get a higher precision
-        uint256 debt = (uint256(_loan.elastic) * terms.interestRate).fmul(
-            elapsedTime
-        );
-
-        unchecked {
-            // Should not overflow.
-            // Debt will eventually be paid to treasury so we update the information here.
-            terms.dnrEarned += debt.toUint128();
-        }
-
-        // Update the total debt owed to the protocol
-        _loan.elastic += debt.toUint128();
-        // Update the loan
-        loan = _loan;
-        loanTerms = terms;
-
-        emit Accrue(debt);
+    function accrue() external {
+        _accrue();
     }
 
     function deposit(address to, uint256 amount) external {
@@ -369,17 +319,17 @@ contract ERC20Market is
     }
 
     function withdraw(address to, uint256 amount) external isSolvent {
-        accrue();
+        _accrue();
         _withdraw(to, amount);
     }
 
     function borrow(address to, uint256 amount) external isSolvent {
-        accrue();
+        _accrue();
         _borrow(to, amount);
     }
 
     function repay(address account, uint256 amount) external {
-        accrue();
+        _accrue();
         _repay(account, amount);
     }
 
@@ -398,12 +348,12 @@ contract ERC20Market is
         for (uint256 i; i < requests.length; i = i.uAdd(1)) {
             uint256 requestAction = requests[i];
 
-            if (!checkForAccrue && _checkForAccrue(requestAction)) {
-                accrue();
+            if (_checkForAccrue(requestAction) && !checkForAccrue) {
+                _accrue();
                 checkForAccrue = true;
             }
 
-            if (!checkForSolvency && _checkForSolvency(requestAction))
+            if (_checkForSolvency(requestAction) && !checkForSolvency)
                 checkForSolvency = true;
 
             _request(requestAction, requestArgs[i]);
@@ -449,7 +399,7 @@ contract ERC20Market is
         );
 
         // Need all debt to be up to date
-        accrue();
+        _accrue();
 
         // Save state to memory for gas saving
 
@@ -479,9 +429,10 @@ contract ERC20Market is
             // We round up to give an edge to the protocol and liquidator.
             uint256 debt = _loan.toElastic(principal, true);
 
-            // How much collateral is needed to cover the loan + fees.
+            // How much collateral is needed to cover the loan.
             // Since Dinero is always USD we can calculate this way.
             uint256 collateralToCover = debt.fdiv(_exchangeRate);
+
             // Calculate the collateralFee (for the liquidator and the protocol)
             uint256 fee = collateralToCover.fmul(liquidationFee);
 
@@ -500,11 +451,12 @@ contract ERC20Market is
                 collateralToCover
             );
 
-            // Update local information. It should not overflow max uint128.
-            liquidationInfo.allCollateral += collateralToCover.toUint128();
-            liquidationInfo.allPrincipal += principal.toUint128();
-            liquidationInfo.allDebt += debt.toUint128();
-            liquidationInfo.allFee += fee.toUint128();
+            liquidationInfo.allCollateral += collateralToCover;
+            liquidationInfo.allDebt += debt;
+            unchecked {
+                liquidationInfo.allPrincipal += principal;
+                liquidationInfo.allFee += fee;
+            }
         }
 
         // There must have liquidations or we revert to not waste anymore gas.
@@ -518,7 +470,7 @@ contract ERC20Market is
         );
 
         // 10% of the liquidation fee to be given to the protocol.
-        uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
+        uint256 protocolFee = liquidationInfo.allFee.fmul(0.1e18);
 
         loanTerms.collateralEarned = uint256(loanTerms.collateralEarned)
             .uAdd(protocolFee)
@@ -539,7 +491,7 @@ contract ERC20Market is
                 liquidationInfo.allDebt
             );
 
-        // This step we destroy `DINERO` equivalent to all outstanding debt. This does not include the liquidator fee.
+        // This step we destroy `DINERO` equivalent to all outstanding debt.
         DNR.burn(_msgSender(), liquidationInfo.allDebt);
     }
 
@@ -609,6 +561,7 @@ contract ERC20Market is
         if (loan.elastic > maxBorrowAmount)
             revert ERC20Market__MaxBorrowAmountReached();
 
+        // loan.elastic will overflow before the principal.
         unchecked {
             userAccount[_msgSender()].principal += principal.toUint128();
         }
@@ -661,14 +614,66 @@ contract ERC20Market is
         // Account has no open loans. So he is solvent.
         if (account.principal == 0) return true;
 
-        // Account has no collateral so he can not open any loans. He is insolvent.
+        // Account has no collateral but has open loans, he is insolvent.
         if (account.collateral == 0) return false;
 
         // All Loans are emitted in `DINERO` which is based on USD price
         // Collateral in USD * {maxLTVRatio} has to be greater than principal + interest rate accrued in DINERO which is pegged to USD
         return
             uint256(account.collateral).fmul(exchangeRate).fmul(maxLTVRatio) >=
-            account.principal;
+            loan.toElastic(account.principal, true);
+    }
+
+    function _accrue() internal {
+        // Save gas save loan info to memory
+        LoanTerms memory terms = loanTerms;
+
+        // Variable to know how many blocks have passed since {loan.lastAccrued}.
+        uint256 elapsedTime;
+
+        unchecked {
+            // Should never overflow.
+            // Check how much time passed since the last we accrued interest
+            // solhint-disable-next-line not-rely-on-time
+            elapsedTime = block.timestamp - terms.lastAccrued;
+        }
+
+        // If no time has passed. There is nothing to do;
+        if (elapsedTime == 0) return;
+
+        // Update the lastAccrued time to this block
+        // solhint-disable-next-line not-rely-on-time
+        terms.lastAccrued = block.timestamp.toUint64();
+
+        // Save to memory the totalLoan information for gas optimization
+        Rebase memory _loan = loan;
+
+        // If there are no open loans. We do not need to update the fees.
+        if (terms.interestRate == 0 || _loan.base == 0) {
+            // Save the lastAccrued time to storage and return.
+            loanTerms = terms;
+            return;
+        }
+
+        // Amount of tokens every borrower together owes the protocol
+        // By using {fmul} at the end we get a higher precision
+        uint256 debt = (uint256(_loan.elastic) * terms.interestRate).fmul(
+            elapsedTime
+        );
+
+        unchecked {
+            // Should not overflow.
+            // Debt will eventually be paid to the treasury, which will  reset dnrEarned to 0.
+            terms.dnrEarned += debt.toUint128();
+        }
+
+        // Update the total debt owed to the protocol
+        _loan.elastic += debt.toUint128();
+        // Update the loan
+        loan = _loan;
+        loanTerms = terms;
+
+        emit Accrue(debt);
     }
 
     /**
@@ -677,7 +682,7 @@ contract ERC20Market is
      * @param requestAction The action associated to a function
      * @param data The arguments to be passed to the function
      */
-    function _request(uint256 requestAction, bytes calldata data) private {
+    function _request(uint256 requestAction, bytes calldata data) internal {
         if (requestAction == DEPOSIT_REQUEST) {
             (address to, uint256 amount) = abi.decode(data, (address, uint256));
             return _deposit(to, amount);
@@ -756,6 +761,10 @@ contract ERC20Market is
     function setInterestRate(uint256 amount) external onlyOwner {
         // 13e8 * 60 * 60 * 24 * 365 / 1e18 = ~ 0.0409968
         if (amount > 13e8) revert ERC20Market__InvalidInterestRate();
+
+        // Update the loan information before updating the interest rate.
+        _accrue();
+
         loanTerms.interestRate = amount.toUint128();
         emit InterestRate(amount);
     }

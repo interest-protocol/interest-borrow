@@ -96,8 +96,8 @@ contract LPFreeMarket is
 
     struct LiquidationInfo {
         uint256 allCollateral;
-        uint128 allPrincipal;
-        uint128 allFee;
+        uint256 allPrincipal;
+        uint256 allFee;
     }
 
     struct Account {
@@ -225,8 +225,8 @@ contract LPFreeMarket is
     /**
      * Requirements:
      *
-     * @param contracts addresses of contracts to intialize this market
-     * @param settings several global state uint256 variables to initialize this market
+     * @param contracts addresses of contracts to intialize this market.
+     * @param settings several global state uint variables to initialize this market
      *
      * - Can only be called at once and should be called during creation to prevent front running.
      */
@@ -273,10 +273,8 @@ contract LPFreeMarket is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Check if a user loan is below the {maxLTVRatio}.
-     *
-     * @notice This function requires this contract to be deployed in a blockchain with low TX fees. As calling an oracle can be quite expensive.
-     * @notice That the oracle is called in this function. In case of failure, liquidations, borrowing dinero and removing collateral will be disabled. Underwater loans will not be liquidated, but good news is that borrowing and removing collateral will remain closed.
+     * @notice Check if a user loan is below the {maxLTVRatio}.
+     * @dev We call the Chainlink oracle in this function, which can make this very costly on chains with a high gas price.
      */
     modifier isSolvent() {
         _;
@@ -285,7 +283,7 @@ contract LPFreeMarket is
                 _msgSender(),
                 ORACLE.getIPXLPTokenUSDPrice(
                     address(COLLATERAL),
-                    // Interest DEX LP tokens have 18 decimals
+                    // Oracle prices have 18 decimals.
                     1 ether
                 )
             )
@@ -319,7 +317,7 @@ contract LPFreeMarket is
         // Variable to keep track of the {IPX} rewards we will get by depositing and unstaking.
         uint256 rewards;
 
-        // Get rewards from the {STAKING_TOKEN} pool.
+        // Get rewards from the {COLLATERAL} pool.
         rewards = rewards.uAdd(_depositFarm(0));
 
         // Get rewards from the {IPX} pool.
@@ -345,37 +343,58 @@ contract LPFreeMarket is
         emit Compound(rewards, fee);
     }
 
+    /**
+     * @dev The tokens will be transfered from the {msg.sender}
+     * @param to The address that the deposit will be assigned to.
+     * @param amount The number of {COLLATERAL} tokens that will be deposited.
+     */
     function deposit(address to, uint256 amount) external {
         _deposit(to, amount);
     }
 
+    /**
+     * @dev The tokens withdrawn will be from the {msg.sender} account.
+     * @param to The address that will receive the tokens withdrawn.
+     * @param amount The number of tokens to withdraw.
+     */
     function withdraw(address to, uint256 amount) external isSolvent {
         _withdraw(_msgSender(), to, to, amount);
     }
 
+    /**
+     * @dev The borrow will be credited to the {msg.sender} account.
+     * @param to The address that will receive the borrowed tokens.
+     * @param amount How many dinero tokens the {msg.sender} is borrowing.
+     */
     function borrow(address to, uint256 amount) external isSolvent {
         _borrow(to, amount);
     }
 
+    /**
+     * @dev The repayment is done by burning dinero from the {msg.sender} account.
+     * @param account The account that will be credited with the repayment.
+     * @param amount The number of Dinero tokens to repay.
+     */
     function repay(address account, uint256 amount) external {
         _repay(account, amount);
     }
 
     /**
-     * @dev Function to call borrow, addCollateral, withdrawCollateral and repay in an arbitrary order
-     *
-     * @param requests Array of actions to denote, which function to call
-     * @param requestArgs The data to pass to the function based on the request
+     * @notice This function allows to chain (deposit, withdraw, borrow and repay) operations in one call.
+     * @param requests An array of uint actions to run.
+     * @param requestArgs The arguments to call the action operations with.
      */
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
         external
     {
+        // Indicates if the user must be solvent after the actions.
+        // We only want to call {_isSolvent} once to save gas.
         bool checkForSolvency;
 
         for (uint256 i; i < requests.length; i = i.uAdd(1)) {
             uint256 requestAction = requests[i];
 
-            if (!checkForSolvency && _checkForSolvency(requestAction))
+            if (_checkForSolvency(requestAction) && !checkForSolvency)
                 checkForSolvency = true;
 
             _request(requestAction, requestArgs[i]);
@@ -395,21 +414,16 @@ contract LPFreeMarket is
     }
 
     /**
-     * @dev This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol
-     * @notice Liquidator can use collateral to close the position or must have enough dinero in this account.
-     * @notice Liquidators can only close a portion of an underwater position.
-     * @notice We do not require the  liquidator to use the collateral. If there are any "lost" tokens in the contract. Those can be use as well.
-     * @notice If a data is passed, the recipient is assumed to implement the interface {ISwap}.
-     *
+     * @notice This function closes underwater positions. It charges the borrower a fee and rewards the liquidator for keeping the integrity of the protocol. The liquidator can use the collateral to close the position or must have enough dinero to repay the loan.
+     * @dev If the data field is not empty, the recipient is assumed to implement the interface {ISwap}.
      * @param accounts The  list of accounts to be liquidated.
-     * @param principals The amount of principal the `msg.sender` wants to liquidate for each account.
+     * @param principals The amount of principal the `msg.sender` wants to liquidate from each account.
      * @param recipient The address that will receive the proceeds gained by liquidating.
-     * @param data arbitrary data to be passed to recipient.
+     * @param data arbitrary data to be passed to the recipient.
      *
      * Requirements:
      *
-     * - If the liquidator wishes to use collateral to pay off a debt. He must exchange it to Dinero.
-     * - He must hold enough Dinero to cover the sum of principals if opts to not sell the collateral in PCS to avoid slippage costs.
+     * - He must hold enough Dinero to cover the sum of principals.
      */
     function liquidate(
         address[] calldata accounts,
@@ -445,33 +459,26 @@ contract LPFreeMarket is
             unchecked {
                 // The minimum value is it's own value. So this can never underflow.
                 // Update the userLoan global state
-                userPrincipal[account] -= principal.toUint128();
+                userPrincipal[account] -= principal;
             }
 
             // How much collateral is needed to cover the loan.
-            // Since Dinero is always USD we can calculate this way.
+            // Since Dinero is always 1 USD we can calculate this way.
+            // We do not care what is the current price of Dinero as we want it to force to be 1 USD.
             uint256 collateralToCover = principal.fdiv(_exchangeRate);
 
             // Calculate the collateralFee (for the liquidator and the protocol)
             uint256 fee = collateralToCover.fmul(liquidationFee);
 
             // Remove the collateral from the account. We can consider the debt paid.
-            userAccount[account].collateral -= (collateralToCover + fee)
-                .toUint128();
-
-            // Get the Rewards and collateral if they are in a vault to this contract.
-            // The rewards go to the `account`.
-            // The collateral comes to this contract.
-            // If the collateral is in this contract do nothing.
-
-            _withdraw(account, address(this), account, collateralToCover);
+            // The rewards accrued will be sent to the liquidated `account`.
+            _withdraw(account, address(this), account, collateralToCover + fee);
 
             emit Repay(_msgSender(), account, principal);
 
-            // Update local information. It should not overflow max uint128.
             liquidationInfo.allCollateral += collateralToCover;
-            liquidationInfo.allPrincipal += principal.toUint128();
-            liquidationInfo.allFee += fee.toUint128();
+            liquidationInfo.allPrincipal += principal;
+            liquidationInfo.allFee += fee;
         }
 
         // There must have liquidations or we throw an error;
@@ -483,13 +490,11 @@ contract LPFreeMarket is
         // We already substract these values from userAccount and userPrincipal mapping. So we d not need to check for underflow
         unchecked {
             // Update Global state
-            totalPrincipal -= liquidationInfo.allPrincipal;
-            // Update the total collateral amount.
-            totalAmount -= liquidationInfo.allCollateral.toUint128();
+            totalPrincipal -= liquidationInfo.allPrincipal.toUint128();
         }
 
-        // 10% of the liquidation fee to be given to the protocol.
-        uint256 protocolFee = uint256(liquidationInfo.allFee).fmul(0.1e18);
+        // The protocol keeps 10% of the liquidation fee.
+        uint256 protocolFee = liquidationInfo.allFee.fmul(0.1e18);
 
         unchecked {
             // Collect the protocol fee.
@@ -497,8 +502,7 @@ contract LPFreeMarket is
         }
 
         uint256 liquidatorAmount = liquidationInfo.allCollateral +
-            liquidationInfo.allFee -
-            protocolFee;
+            liquidationInfo.allFee.uSub(protocolFee);
 
         // If any  data is passed, we assume the recipient is a swap contract.
         if (data.length > 0) {
@@ -512,11 +516,11 @@ contract LPFreeMarket is
                 recipient
             );
         } else {
-            // Send the collateral to the recipient.
+            // Send the collateral to the recipient without removing the liquidity.
             COLLATERAL.safeTransfer(recipient, liquidatorAmount);
         }
 
-        // This step we destroy `DINERO` equivalent to all outstanding principal.
+        // The {msg.sender} must have enough Dinero to be burned to cover all outstanding principal.
         DNR.burn(_msgSender(), liquidationInfo.allPrincipal);
     }
 
@@ -541,24 +545,22 @@ contract LPFreeMarket is
      * @param amount The number of IPX to send.
      */
     function _safeIPXTransfer(address to, uint256 amount) internal {
-        uint256 balance = _getIPXBalance();
-
-        IPX.safeTransfer(to, balance.min(amount));
+        IPX.safeTransfer(to, _getIPXBalance().min(amount));
     }
 
     /**
      * @dev It deposits all {IPX} stored in the contract in the {IPX} pool in the {IPX_MASTER_CHEF} and returns the rewards obtained.
      *
-     * @return ipxHarvested The reward acrrued up to this block in {IPX}.
+     * @return uint256 The reward acrrued up to this block in {IPX}.
      */
-    function _stakeIPX() internal returns (uint256 ipxHarvested) {
+    function _stakeIPX() internal returns (uint256) {
         CASA_DE_PAPEL.stake(0, _getIPXBalance());
-        // Current {balanceOf} IPX are all rewards because we just staked our entire {IPX} balance.
-        ipxHarvested = _getIPXBalance();
+        // The current {balanceOf} IPX is equivalent to all rewards because we just staked our entire {IPX} balance.
+        return _getIPXBalance();
     }
 
     /**
-     * @dev It withdraws an `amount` of {IPX} from the {IPX_MASTER_CHEF} and returns the arewards obtained.
+     * @dev It withdraws an `amount` of {IPX} from the {IPX_MASTER_CHEF} and returns the rewards obtained.
      *
      * @param amount The number of {IPX} to be unstaked.
      * @return ipxHarvested The number of {IPX} that was obtained as reward.
@@ -567,11 +569,11 @@ contract LPFreeMarket is
         internal
         returns (uint256 ipxHarvested)
     {
-        uint256 preBalance = _getIPXBalance();
+        ipxHarvested = _getIPXBalance();
 
         CASA_DE_PAPEL.unstake(0, amount);
-        // Need to subtract the previous balance and withdrawn amount from the current {balanceOf} to know many reward {IPX} we got.
-        ipxHarvested = _getIPXBalance() - preBalance - amount;
+        // Need to subtract the previous balance and the withdrawn amount from the current {balanceOf} to know many {IPX} rewards  we got.
+        ipxHarvested = _getIPXBalance() - ipxHarvested - amount;
     }
 
     /**
@@ -582,37 +584,37 @@ contract LPFreeMarket is
     }
 
     /**
-     * @dev This function deposits {STAKING_TOKEN} in the pool and calculates/returns the rewards obtained via the deposit function.
+     * @dev This function deposits {COLLATERAL} in the pool and calculates/returns the rewards obtained via the deposit function.
      *
-     * @param amount The number of {STAKING_TOKEN} to deposit in the {CASA_DE_PAPEL}.
+     * @param amount The number of {COLLATERAL} to deposit in the {CASA_DE_PAPEL}.
      * @return ipxHarvested It returns how many {IPX} we got as reward from the depsit function.
      */
     function _depositFarm(uint256 amount)
-        private
+        internal
         returns (uint256 ipxHarvested)
     {
         // Need to save the {balanceOf} {IPX} before the deposit function to calculate the rewards.
-        uint256 preBalance = _getIPXBalance();
+        ipxHarvested = _getIPXBalance() - amount;
         CASA_DE_PAPEL.stake(POOL_ID, amount);
         // Find how much IPX we earned after depositing as the deposit functions always {transfer} the pending {IPX} rewards.
-        ipxHarvested = _getIPXBalance() - preBalance;
+        ipxHarvested = _getIPXBalance() - ipxHarvested;
     }
 
     /**
-     * @dev It withdraws an `amount` of {STAKING_TOKEN} from the pool. And it keeps track of the rewards obtained by using the {_getBalance} function.
+     * @dev It withdraws an `amount` of {COLLATERAL} from the farm. And it keeps track of the rewards obtained by using the {_getBalance} function.
      *
-     * @param amount The number of {STAKING_TOKEN} to be withdrawn from the {CASA_DE_PAPEL}.
-     * @return ipxHarvested It returns how many {IPX} we got as reward.
+     * @param amount The number of {COLLATERAL} to be withdrawn from the {CASA_DE_PAPEL}.
+     * @return ipxHarvested It returns the number of {IPX} tokens we got as reward.
      */
     function _withdrawFarm(uint256 amount)
-        private
+        internal
         returns (uint256 ipxHarvested)
     {
         // Save the current {IPX} balance before calling the withdraw function because it will give us rewards.
-        uint256 preBalance = _getIPXBalance();
+        ipxHarvested = _getIPXBalance();
         CASA_DE_PAPEL.unstake(POOL_ID, amount);
         // The difference between the previous {IPX} balance and the current balance is the rewards obtained via the withdraw function.
-        ipxHarvested = _getIPXBalance() - preBalance;
+        ipxHarvested = _getIPXBalance() - ipxHarvested;
     }
 
     function _deposit(address to, uint256 amount) internal {
@@ -627,7 +629,7 @@ contract LPFreeMarket is
 
         // If there are no tokens deposited, we do not have to update the current rewards.
         if (_totalAmount != 0) {
-            // Get rewards currently in the {STAKING_TOKEN} pool.
+            // Get rewards currently in the {COLLATERAL} pool.
             _totalRewardsPerToken += _depositFarm(0).fdiv(_totalAmount);
             // Reinvest all {IPX} rewards into the IPX pool.
             // The functions on this block send pending {IPX} to this contract. Therefore, we need to update the {_totalRewardsPerAccount}.
@@ -648,6 +650,7 @@ contract LPFreeMarket is
 
         // Update local State
         _totalAmount += amount;
+
         unchecked {
             user.collateral += amount.toUint128();
         }
@@ -724,8 +727,8 @@ contract LPFreeMarket is
         uint256 newIPXBalance = _getIPXBalance();
 
         // Only restake if there is at least 10 {IPX} in the contract after sending the rewards.
-        // If there are no {STAKING TOKENS} left, we do not need to restake. Because it means the vault is empty.
-        if (_totalAmount > 0 && newIPXBalance >= 10 ether) {
+        // If there are no {COLLATERAL} left, we do not need to restake. Because it means the vault is empty.
+        if (newIPXBalance >= 10 ether) {
             // Already took the rewards up to this block. So we do not need to update the {_totalRewardsPerAmount}.
             CASA_DE_PAPEL.stake(0, newIPXBalance);
         }
@@ -737,10 +740,10 @@ contract LPFreeMarket is
             user.rewardDebt = _totalRewardsPerToken.fmul(user.collateral);
             totalAmount = _totalAmount.toUint128();
         } else {
-            // If the Vault does not have any {STAKING_TOKEN}, reset the global state.
-            totalAmount = 0;
-            totalRewardsPerToken = 0;
-            user.rewardDebt = 0;
+            // If the Vault does not have any {COLLATERAL}, reset the global state.
+            delete totalAmount;
+            delete totalRewardsPerToken;
+            delete user.rewardDebt;
         }
 
         userAccount[from] = user;

@@ -22,21 +22,6 @@
       "kind": "uups"
     },
     {
-      "address": "0x3D5a8E8348418a5051Dbe91863562A915E1C0FC0",
-      "txHash": "0x10f851baeba22948f7a3f896aacceb592e73aee2add2f938f3c20a8caf6d752e",
-      "kind": "uups"
-    },
-    {
-      "address": "0x9230Bfd38f0f4DD2F0cB3100Bf24Dddb4eDB2ef7",
-      "txHash": "0xfc0294edd8d02d63d96fcd54140fdb1cd530da1c452ca24c551e1a885f206bc6",
-      "kind": "uups"
-    },
-    {
-      "address": "0x03E67e085e65B361c1A5cf17d8F1EcfEbAC1ccfB",
-      "txHash": "0x91676a8f8df335d65ef8beee22c3583936906e7099d0f2c5876394a4d391ac3a",
-      "kind": "uups"
-    },
-    {
       "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
       "txHash": "0x9131866dae3c1f79447b2e079961f08e139dee5adf5ed987f0158f4cd0c7f4ad",
       "kind": "uups"
@@ -64,11 +49,6 @@
     {
       "address": "0x335Ea63013DEcc3e270D6E095A460530c552CF3E",
       "txHash": "0xb7e93f82b3dadc60ae5041ad45c43282767fe46f8e484f1cb35f35f0a61910b2",
-      "kind": "uups"
-    },
-    {
-      "address": "0x688F01FF7f8e48ED6A209fC965c77e2980af7c21",
-      "txHash": "0x71d9ce8a1b6c7ec3063cd646642dae9476349e67b8bbd168edf251e8be5d6cf1",
       "kind": "uups"
     },
     {
@@ -169,6 +149,26 @@
     {
       "address": "0x541c8Fbe245ccf607dD599bC6c62e9c26d55BA90",
       "txHash": "0x23ae9ad50d042d60d8ef2faa510d8d005a8a07f37a4f3e1260b094f883496df5",
+      "kind": "uups"
+    },
+    {
+      "address": "0x03E67e085e65B361c1A5cf17d8F1EcfEbAC1ccfB",
+      "txHash": "0x91676a8f8df335d65ef8beee22c3583936906e7099d0f2c5876394a4d391ac3a",
+      "kind": "uups"
+    },
+    {
+      "address": "0x3D5a8E8348418a5051Dbe91863562A915E1C0FC0",
+      "txHash": "0x87300263ecd85daedd29e49c5a77be42f5d7b92f1f091ac8b6e32ed7cec8a772",
+      "kind": "uups"
+    },
+    {
+      "address": "0x9230Bfd38f0f4DD2F0cB3100Bf24Dddb4eDB2ef7",
+      "txHash": "0x2087fccb1b7a0a54d70395927e5dbcdc1fdcaa482cf011ee861e15ec8de4aac5",
+      "kind": "uups"
+    },
+    {
+      "address": "0x688F01FF7f8e48ED6A209fC965c77e2980af7c21",
+      "txHash": "0x44d0edf2e803b580051ca8bfdf8c81d9b311cb95258c40eb65c6f50e10926c8c",
       "kind": "uups"
     }
   ],
@@ -538,627 +538,6 @@
         }
       }
     },
-    "87a29c5be3cab71d0720c7610ea3b03d367dbdff64ea25d10086c2d5990e9274": {
-      "address": "0x459CF9a1a496AC928ab0E90a8ef1148d7Acec4B4",
-      "txHash": "0x60f9dbaec10eef578d68a843c68b0ce210a3844569ee34f31908ccd8412d2d15",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ERC1967UpgradeUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "UUPSUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
-          },
-          {
-            "label": "getUSDFeed",
-            "offset": 0,
-            "slot": "201",
-            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
-            "contract": "PriceOracle",
-            "src": "contracts/PriceOracle.sol:26"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(AggregatorV3Interface)45": {
-            "label": "contract AggregatorV3Interface",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_contract(AggregatorV3Interface)45)": {
-            "label": "mapping(address => contract AggregatorV3Interface)",
-            "numberOfBytes": "32"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          }
-        }
-      }
-    },
-    "b56c282c6b590cb26a459766ff063c2ba3b7f713613a020f5f31bac0837dd702": {
-      "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
-      "txHash": "0x4d459e4ad2f3c2e0a152b9bba836a40bb828f29db764d8efa15ab2ff9adcc317",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ERC1967UpgradeUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "UUPSUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
-          },
-          {
-            "label": "DNR",
-            "offset": 0,
-            "slot": "201",
-            "type": "t_contract(IDinero)8060",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:149"
-          },
-          {
-            "label": "treasury",
-            "offset": 0,
-            "slot": "202",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:155"
-          },
-          {
-            "label": "COLLATERAL",
-            "offset": 0,
-            "slot": "203",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:162"
-          },
-          {
-            "label": "liquidationFee",
-            "offset": 20,
-            "slot": "203",
-            "type": "t_uint96",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:165"
-          },
-          {
-            "label": "ORACLE",
-            "offset": 0,
-            "slot": "204",
-            "type": "t_contract(IPriceOracle)19584",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:172"
-          },
-          {
-            "label": "maxBorrowAmount",
-            "offset": 0,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:180"
-          },
-          {
-            "label": "maxLTVRatio",
-            "offset": 16,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:183"
-          },
-          {
-            "label": "loan",
-            "offset": 0,
-            "slot": "206",
-            "type": "t_struct(Rebase)7406_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:189"
-          },
-          {
-            "label": "loanTerms",
-            "offset": 0,
-            "slot": "207",
-            "type": "t_struct(LoanTerms)16194_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:196"
-          },
-          {
-            "label": "userAccount",
-            "offset": 0,
-            "slot": "209",
-            "type": "t_mapping(t_address,t_struct(Account)16185_storage)",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:204"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(IDinero)8060": {
-            "label": "contract IDinero",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IPriceOracle)19584": {
-            "label": "contract IPriceOracle",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_struct(Account)16185_storage)": {
-            "label": "mapping(address => struct ERC20Market.Account)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(Account)16185_storage": {
-            "label": "struct ERC20Market.Account",
-            "members": [
-              {
-                "label": "collateral",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "principal",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_struct(LoanTerms)16194_storage": {
-            "label": "struct ERC20Market.LoanTerms",
-            "members": [
-              {
-                "label": "lastAccrued",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "interestRate",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              },
-              {
-                "label": "dnrEarned",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "1"
-              },
-              {
-                "label": "collateralEarned",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Rebase)7406_storage": {
-            "label": "struct Rebase",
-            "members": [
-              {
-                "label": "elastic",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "base",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint128": {
-            "label": "uint128",
-            "numberOfBytes": "16"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          },
-          "t_uint96": {
-            "label": "uint96",
-            "numberOfBytes": "12"
-          }
-        }
-      }
-    },
-    "b666e2c69bec96eb618f745cf597ce1da37fa36bb9e4bd75f7c96330c5a1876b": {
-      "address": "0xd3d0d598E6BD0a6B667c4e8B0C3C11c20bb1f089",
-      "txHash": "0x6ca87de6fb69f9a671058ff66cca3fc44ec005e9aab2e7bee9c7aa85ced36262",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ERC1967UpgradeUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "UUPSUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
-          },
-          {
-            "label": "DNR",
-            "offset": 0,
-            "slot": "201",
-            "type": "t_contract(IDinero)8060",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:149"
-          },
-          {
-            "label": "treasury",
-            "offset": 0,
-            "slot": "202",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:155"
-          },
-          {
-            "label": "COLLATERAL",
-            "offset": 0,
-            "slot": "203",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:162"
-          },
-          {
-            "label": "liquidationFee",
-            "offset": 20,
-            "slot": "203",
-            "type": "t_uint96",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:165"
-          },
-          {
-            "label": "ORACLE",
-            "offset": 0,
-            "slot": "204",
-            "type": "t_contract(IPriceOracle)19584",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:172"
-          },
-          {
-            "label": "maxBorrowAmount",
-            "offset": 0,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:180"
-          },
-          {
-            "label": "maxLTVRatio",
-            "offset": 16,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:183"
-          },
-          {
-            "label": "loan",
-            "offset": 0,
-            "slot": "206",
-            "type": "t_struct(Rebase)7406_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:189"
-          },
-          {
-            "label": "loanTerms",
-            "offset": 0,
-            "slot": "207",
-            "type": "t_struct(LoanTerms)16194_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:196"
-          },
-          {
-            "label": "userAccount",
-            "offset": 0,
-            "slot": "209",
-            "type": "t_mapping(t_address,t_struct(Account)16185_storage)",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:204"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(IDinero)8060": {
-            "label": "contract IDinero",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IPriceOracle)19584": {
-            "label": "contract IPriceOracle",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_struct(Account)16185_storage)": {
-            "label": "mapping(address => struct ERC20Market.Account)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(Account)16185_storage": {
-            "label": "struct ERC20Market.Account",
-            "members": [
-              {
-                "label": "collateral",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "principal",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_struct(LoanTerms)16194_storage": {
-            "label": "struct ERC20Market.LoanTerms",
-            "members": [
-              {
-                "label": "lastAccrued",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "interestRate",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              },
-              {
-                "label": "dnrEarned",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "1"
-              },
-              {
-                "label": "collateralEarned",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Rebase)7406_storage": {
-            "label": "struct Rebase",
-            "members": [
-              {
-                "label": "elastic",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "base",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint128": {
-            "label": "uint128",
-            "numberOfBytes": "16"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          },
-          "t_uint96": {
-            "label": "uint96",
-            "numberOfBytes": "12"
-          }
-        }
-      }
-    },
     "7c4679c978afbfe542ebf5f84dc3f62d6441035b90535aab0f14c03f4f5e0a31": {
       "address": "0xD08e07A277a7D24659D6F0babd2915d0c9f3BC3A",
       "txHash": "0xd3c89c496be7169e6845a394676ecf432a6153690ebcabc4240a4289364853d3",
@@ -1270,6 +649,635 @@
           "t_uint8": {
             "label": "uint8",
             "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "8af4910d377fbde5359fc68d820c34786e421f3929dff16f3e12187621fa8a2d": {
+      "address": "0x459CF9a1a496AC928ab0E90a8ef1148d7Acec4B4",
+      "txHash": "0x004b4e181a1dcaf1320f3cc8908e3a62f88d0b935231feec6e806a8b7099edfe",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "WRAPPED_NATIVE_TOKEN",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_address",
+            "contract": "PriceOracle",
+            "src": "contracts/PriceOracle.sol:25"
+          },
+          {
+            "label": "getUSDFeed",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_mapping(t_address,t_contract(AggregatorV3Interface)45)",
+            "contract": "PriceOracle",
+            "src": "contracts/PriceOracle.sol:28"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(AggregatorV3Interface)45": {
+            "label": "contract AggregatorV3Interface",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_contract(AggregatorV3Interface)45)": {
+            "label": "mapping(address => contract AggregatorV3Interface)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "4894c7ccb5f4edd69c30ea6ad2c97ef710190b163aa2b5e5e83d00e6593e1335": {
+      "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
+      "txHash": "0xca347fafd71d1810d17b684930bc4dc5314a654e9d45df6760a4bb55bf54fb14",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "DNR",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IDinero)8060",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:149"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:156"
+          },
+          {
+            "label": "COLLATERAL",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:163"
+          },
+          {
+            "label": "liquidationFee",
+            "offset": 20,
+            "slot": "203",
+            "type": "t_uint96",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:166"
+          },
+          {
+            "label": "ORACLE",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IPriceOracle)21124",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:173"
+          },
+          {
+            "label": "maxBorrowAmount",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:181"
+          },
+          {
+            "label": "maxLTVRatio",
+            "offset": 16,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:184"
+          },
+          {
+            "label": "loan",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_struct(Rebase)7406_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:191"
+          },
+          {
+            "label": "loanTerms",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_struct(LoanTerms)16194_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:198"
+          },
+          {
+            "label": "userAccount",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_mapping(t_address,t_struct(Account)16185_storage)",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:206"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDinero)8060": {
+            "label": "contract IDinero",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPriceOracle)21124": {
+            "label": "contract IPriceOracle",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(Account)16185_storage)": {
+            "label": "mapping(address => struct ERC20Market.Account)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Account)16185_storage": {
+            "label": "struct ERC20Market.Account",
+            "members": [
+              {
+                "label": "collateral",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "principal",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(LoanTerms)16194_storage": {
+            "label": "struct ERC20Market.LoanTerms",
+            "members": [
+              {
+                "label": "lastAccrued",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "interestRate",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              },
+              {
+                "label": "dnrEarned",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "collateralEarned",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Rebase)7406_storage": {
+            "label": "struct Rebase",
+            "members": [
+              {
+                "label": "elastic",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "base",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint96": {
+            "label": "uint96",
+            "numberOfBytes": "12"
+          }
+        }
+      }
+    },
+    "422027458ab1f8e12fd51aae390299cf554350da9cadeb07facaaa9a04346061": {
+      "address": "0xd3d0d598E6BD0a6B667c4e8B0C3C11c20bb1f089",
+      "txHash": "0x67182988253ec106bfa25c0b1db4afea786b5327e875d3f43a71e07bbfd1fce3",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "DNR",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IDinero)8060",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:149"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:156"
+          },
+          {
+            "label": "COLLATERAL",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:163"
+          },
+          {
+            "label": "liquidationFee",
+            "offset": 20,
+            "slot": "203",
+            "type": "t_uint96",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:166"
+          },
+          {
+            "label": "ORACLE",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IPriceOracle)21124",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:173"
+          },
+          {
+            "label": "maxBorrowAmount",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:181"
+          },
+          {
+            "label": "maxLTVRatio",
+            "offset": 16,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:184"
+          },
+          {
+            "label": "loan",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_struct(Rebase)7406_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:191"
+          },
+          {
+            "label": "loanTerms",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_struct(LoanTerms)16194_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:198"
+          },
+          {
+            "label": "userAccount",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_mapping(t_address,t_struct(Account)16185_storage)",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:206"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDinero)8060": {
+            "label": "contract IDinero",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPriceOracle)21124": {
+            "label": "contract IPriceOracle",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(Account)16185_storage)": {
+            "label": "mapping(address => struct ERC20Market.Account)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Account)16185_storage": {
+            "label": "struct ERC20Market.Account",
+            "members": [
+              {
+                "label": "collateral",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "principal",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(LoanTerms)16194_storage": {
+            "label": "struct ERC20Market.LoanTerms",
+            "members": [
+              {
+                "label": "lastAccrued",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "interestRate",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              },
+              {
+                "label": "dnrEarned",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "collateralEarned",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Rebase)7406_storage": {
+            "label": "struct Rebase",
+            "members": [
+              {
+                "label": "elastic",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "base",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint96": {
+            "label": "uint96",
+            "numberOfBytes": "12"
           }
         }
       }

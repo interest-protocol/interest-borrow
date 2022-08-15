@@ -3,6 +3,7 @@
   "rules": {
     "compiler-version": ["error", "^0.8.0"],
     "func-visibility": ["warn", { "ignoreConstructors": true }],
-    "var-name-mixedcase": false
+    "var-name-mixedcase": false,
+    "max-states-count": false
   }
 }
