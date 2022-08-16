@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@interest-protocol/dex/lib/DataTypes.sol";
+import "@interest-protocol/dex/DataTypes.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
 import "@interest-protocol/library/MathLib.sol";
 import "@interest-protocol/library/SafeCastLib.sol";

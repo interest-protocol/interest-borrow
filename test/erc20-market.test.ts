@@ -157,42 +157,6 @@ describe('ERC20Market', function () {
       expect(loanTerms.dnrEarned).to.be.equal(0);
       expect(loanTerms.lastAccrued.gte(currentBlockNumber)).to.be.equal(true);
     });
-
-    it('does not get earnings if called on the same block', async () => {
-      const { erc20Market, alice, treasury } = await loadFixture(deployFixture);
-
-      await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
-      await erc20Market
-        .connect(alice)
-        .borrow(alice.address, parseEther('100000'));
-
-      await time.increase(ONE_MONTH_IN_SECONDS);
-
-      await network.provider.send('evm_setAutomine', [false]);
-
-      const firstEarningsTX = await erc20Market.getDineroEarnings();
-
-      const secondEarningsTX = await erc20Market.getDineroEarnings();
-
-      await mine(1);
-
-      await network.provider.send('evm_setAutomine', [true]);
-
-      await firstEarningsTX.wait(1);
-      await secondEarningsTX.wait(1);
-
-      // No event is emitted on first Stake
-      // Only the second TX emitted an updatePool
-      // Third Stake on the same block as the second one. So no event was emitted.
-      expect(
-        (
-          await erc20Market.queryFilter(
-            erc20Market.filters.GetDineroEarnings(treasury.address, null),
-            15_018_612
-          )
-        ).length
-      ).to.be.equal(1);
-    });
   });
 
   describe('function: getCollateralEarnings', function () {

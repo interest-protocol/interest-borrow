@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@interest-protocol/dex/lib/DataTypes.sol";
+import "@interest-protocol/dex/DataTypes.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
-
 import "@interest-protocol/library/MathLib.sol";
 import "@interest-protocol/library/SafeCastLib.sol";
 import "@interest-protocol/library/RebaseLib.sol";
@@ -16,6 +15,8 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
+
+import "hardhat/console.sol";
 
 contract NativeTokenMarket is
     Initializable,
@@ -153,7 +154,7 @@ contract NativeTokenMarket is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 2                            */
+                       STORAGE  SLOT 1                            */
 
     address public treasury;
 
@@ -162,7 +163,7 @@ contract NativeTokenMarket is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 3                            */
+                       STORAGE  SLOT 2                            */
 
     // Contract uses Chainlink to obtain the price in USD with 18 decimals
     IPriceOracle internal ORACLE;
@@ -170,7 +171,7 @@ contract NativeTokenMarket is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 4                            */
+                       STORAGE  SLOT 3                            */
 
     // Dinero Markets must have a max of how much DNR they can create to prevent liquidity issues during liquidations.
     uint128 public maxBorrowAmount;
@@ -317,7 +318,7 @@ contract NativeTokenMarket is
         _accrue();
     }
 
-    function deposit(address to) external payable {
+    function deposit(address to) external payable lock {
         _deposit(to, msg.value);
     }
 
@@ -331,13 +332,13 @@ contract NativeTokenMarket is
         _borrow(to, amount);
     }
 
-    function repay(address account, uint256 amount) external lock {
+    function repay(address account, uint256 amount) external {
         _accrue();
         _repay(account, amount);
     }
 
     // Accept direct native token transfers
-    receive() external payable {
+    receive() external payable lock {
         _deposit(_msgSender(), msg.value);
     }
 
