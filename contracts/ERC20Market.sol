@@ -15,6 +15,7 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
+import "./interfaces/IERC20Market.sol";
 
 contract ERC20Market is
     Initializable,
@@ -150,14 +151,14 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 2                            */
+                       STORAGE  SLOT 1                            */
 
     /// @notice Collects the fees accrued by this contract.
     address public treasury;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 3                            */
+                       STORAGE  SLOT 2                            */
 
     /// @notice The address of the {ERC20} token accepted as collateral by this contract.
     address public COLLATERAL;
@@ -167,7 +168,7 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 4                            */
+                       STORAGE  SLOT 3                            */
 
     /// @notice The address of the Interest Protocol Oracle, which uses Chainlink to obtain the price of the collateral token in USD with 18 decimals.
     IPriceOracle internal ORACLE;
@@ -175,7 +176,7 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 5                            */
+                       STORAGE  SLOT 4                            */
 
     /// @notice Dinero Markets have a maximum amount of DNR they can create to prevent liquidity issues during liquidations. This value is the maximum amount of DNR that can be lent out.
     uint128 public maxBorrowAmount;
@@ -185,7 +186,7 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 6                            */
+                       STORAGE  SLOT 5                            */
 
     /// @notice This struct holds the current loan data. The elastic is the total of amount of DNR oweed.
     Rebase public loan;
@@ -193,14 +194,14 @@ contract ERC20Market is
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 7                            */
+                       STORAGE  SLOT 6                            */
 
     LoanTerms public loanTerms;
 
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
-                       STORAGE  SLOT 8                            */
+                       STORAGE  SLOT 7                            */
 
     // How much principal an address has borrowed.
     mapping(address => Account) public userAccount;

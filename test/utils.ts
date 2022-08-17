@@ -69,6 +69,12 @@ export const BTC_USD_PRICE_FEED = '0x264990fbd0a4796a3e3d8e37c4d5f87a3aca5ebf';
 
 export const BNB_USD_PRICE_FEED = '0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE';
 
+export const BNB_USD_PRICE = ethers.BigNumber.from('417349361890000000000');
+
+export const APPROX_BTC_PRICE = ethers.BigNumber.from(
+  '41629290000000000000000'
+);
+
 export const ETHER_USD_PRICE_FEED =
   '0x9ef1b8c0e4f7dc8bf5719ea496883dc6401d5b2e';
 

@@ -10,13 +10,13 @@ import { ethers, network } from 'hardhat';
 import {
   Dinero,
   NativeTokenMarketDepositReentrancy,
-  NativeTokenMarketWithdrawReentrancy,
   PriceFeed,
   PriceOracle,
   Swap,
   TestNativeTokenMarket,
 } from '../typechain-types';
 import {
+  BNB_USD_PRICE,
   BNB_USD_PRICE_FEED,
   BORROW_REQUEST,
   deploy,
@@ -40,8 +40,6 @@ const LIQUIDATION_FEE = parseEther('0.1');
 const MAX_LTV_RATIO = parseEther('0.5');
 
 const MAX_BORROW_AMOUNT = parseEther('1000000');
-
-const BNB_USD_PRICE = ethers.BigNumber.from('417349361890000000000');
 
 async function deployFixture() {
   const [owner, alice, bob, treasury, jose] = await ethers.getSigners();
@@ -519,9 +517,7 @@ describe('Native Token Market', function () {
     });
 
     it('accepts deposits', async () => {
-      const { nativeTokenMarket, alice, owner } = await loadFixture(
-        deployFixture
-      );
+      const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
 
       await expect(
         alice.sendTransaction({
@@ -890,6 +886,506 @@ describe('Native Token Market', function () {
       );
 
       expect(await nativeTokenMarket.maxBorrowAmount()).to.be.equal(0);
+    });
+  });
+
+  describe('function: request(uint256[],bytes[])', function () {
+    describe('request deposit', function () {
+      it('reverts on amount or address 0', async () => {
+        const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [ethers.constants.AddressZero, 1]
+                ),
+              ],
+              { value: 1 }
+            )
+        ).to.rejectedWith('NativeTokenMarket__InvalidAddress()');
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, 0]
+                ),
+              ]
+            )
+        ).to.rejectedWith('NativeTokenMarket__InvalidAmount()');
+      });
+
+      it('reverts if you try to abuse the msg.value', async () => {
+        const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, 100]
+                ),
+              ],
+              {
+                value: 99,
+              }
+            )
+        ).to.rejected;
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST, DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, 100]
+                ),
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, 1]
+                ),
+              ],
+              {
+                value: 100,
+              }
+            )
+        ).to.rejected;
+      });
+
+      it('accepts deposits', async () => {
+        const { nativeTokenMarket, alice, owner } = await loadFixture(
+          deployFixture
+        );
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [owner.address, parseEther('10')]
+                ),
+              ],
+              {
+                value: parseEther('10'),
+              }
+            )
+        )
+          .to.emit(nativeTokenMarket, 'Deposit')
+          .withArgs(alice.address, owner.address, parseEther('10'));
+
+        const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+        const ownerAccount = await nativeTokenMarket.userAccount(owner.address);
+
+        expect(aliceAccount.collateral).to.be.equal(0);
+        expect(ownerAccount.collateral).to.be.equal(parseEther('10'));
+
+        await nativeTokenMarket.borrow(owner.address, parseEther('100'));
+
+        await time.increase(1000);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [owner.address, parseEther('10')]
+                ),
+              ],
+              {
+                value: parseEther('10'),
+              }
+            )
+        ).to.not.emit(nativeTokenMarket, 'Accrue');
+      });
+    });
+
+    it('reverts if a caller tries to reenter', async () => {
+      const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+      const attacker = await deploy('NativeTokenMarketRequestReentrancy', [
+        nativeTokenMarket.address,
+      ]);
+
+      await nativeTokenMarket
+        .connect(alice)
+        .deposit(attacker.address, { value: parseEther('5') });
+
+      await alice.sendTransaction({
+        to: nativeTokenMarket.address,
+        value: parseEther('1'),
+      });
+
+      await expect(
+        nativeTokenMarket.connect(alice).withdraw(attacker.address, 1)
+      ).to.rejectedWith('NativeTokenTransferFailed()');
+    });
+
+    describe('request withdraw', function () {
+      it('reverts on 0 amount withdraws', async () => {
+        const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+        await expect(
+          nativeTokenMarket.request(
+            [WITHDRAW_REQUEST],
+            [defaultAbiCoder.encode(['address', 'uint256'], [alice.address, 0])]
+          )
+        ).to.rejectedWith('NativeTokenMarket__InvalidAmount()');
+      });
+
+      it('allows solvent users to withdraw', async () => {
+        const { nativeTokenMarket, alice, owner } = await loadFixture(
+          deployFixture
+        );
+
+        const ownerBalance = await owner.getBalance();
+
+        await nativeTokenMarket
+          .connect(alice)
+          .request(
+            [DEPOSIT_REQUEST, BORROW_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, parseEther('10')]
+              ),
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, parseEther('1000')]
+              ),
+            ],
+            { value: parseEther('10') }
+          );
+
+        await time.increase(1000);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [WITHDRAW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [owner.address, parseEther('2')]
+                ),
+              ]
+            )
+        )
+          .to.emit(nativeTokenMarket, 'Accrue')
+          .to.emit(nativeTokenMarket, 'Withdraw')
+          .withArgs(alice.address, owner.address, parseEther('2'));
+
+        expect(
+          (await nativeTokenMarket.userAccount(alice.address)).collateral
+        ).to.be.equal(parseEther('8'));
+
+        expect(await owner.getBalance()).to.be.equal(
+          ownerBalance.add(parseEther('2'))
+        );
+      });
+
+      it('does not allow insolvent users to withdraw', async () => {
+        const { nativeTokenMarket, alice, priceOracle } = await loadFixture(
+          deployFixture
+        );
+
+        const priceFeed: PriceFeed = await deploy('PriceFeed');
+
+        await nativeTokenMarket
+          .connect(alice)
+          .request(
+            [DEPOSIT_REQUEST, BORROW_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, parseEther('10')]
+              ),
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [
+                  alice.address,
+                  MAX_LTV_RATIO.mul(
+                    BNB_USD_PRICE.mul(parseEther('10')).div(parseEther('1'))
+                  ).div(parseEther('1')),
+                ]
+              ),
+            ],
+            { value: parseEther('10') }
+          );
+
+        await priceFeed.setPrice(
+          BNB_USD_PRICE.sub(parseEther('1')).div(
+            ethers.BigNumber.from(10).pow(10)
+          )
+        );
+
+        await priceOracle.setUSDFeed(WRAPPED_NATIVE_TOKEN, priceFeed.address);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .withdraw(alice.address, parseEther('0.1'))
+        ).to.rejectedWith('NativeTokenMarket__InsolventCaller()');
+      });
+    });
+
+    describe('request borrow', function () {
+      it('reverts if you try to borrow more than maxBorrowAmount', async () => {
+        const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+        await nativeTokenMarket.setMaxBorrowAmount(parseEther('100'));
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST, BORROW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, parseEther('1')]
+                ),
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, parseEther('101')]
+                ),
+              ],
+              { value: parseEther('1') }
+            )
+        ).to.rejectedWith('NativeTokenMarket__MaxBorrowAmountReached()');
+      });
+
+      it('allows borrowing', async () => {
+        const { nativeTokenMarket, alice, owner, dinero } = await loadFixture(
+          deployFixture
+        );
+
+        const loan = await nativeTokenMarket.loan();
+        const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+
+        expect(loan.elastic).to.be.equal(0);
+        expect(loan.base).to.be.equal(0);
+        expect(aliceAccount.principal).to.be.equal(0);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST, BORROW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, parseEther('10')]
+                ),
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [owner.address, parseEther('1000')]
+                ),
+              ],
+              { value: parseEther('10') }
+            )
+        )
+          .to.emit(nativeTokenMarket, 'Borrow')
+          .withArgs(
+            alice.address,
+            owner.address,
+            parseEther('1000'),
+            parseEther('1000')
+          )
+          .to.emit(dinero, 'Transfer')
+          .withArgs(
+            ethers.constants.AddressZero,
+            owner.address,
+            parseEther('1000')
+          );
+
+        const loan2 = await nativeTokenMarket.loan();
+        const aliceAccount2 = await nativeTokenMarket.userAccount(
+          alice.address
+        );
+
+        expect(loan2.elastic).to.be.equal(parseEther('1000'));
+        expect(loan2.base).to.be.equal(parseEther('1000'));
+        expect(aliceAccount2.principal).to.be.equal(parseEther('1000'));
+
+        await time.increase(100);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [BORROW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [owner.address, parseEther('1')]
+                ),
+              ]
+            )
+        ).to.emit(nativeTokenMarket, 'Accrue');
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .borrow(owner.address, parseEther('10000'))
+        ).to.rejectedWith('NativeTokenMarket__InsolventCaller()');
+      });
+
+      it('reverts if the borrower is insolvent', async () => {
+        const { nativeTokenMarket, alice, priceOracle } = await loadFixture(
+          deployFixture
+        );
+
+        const priceFeed: PriceFeed = await deploy('PriceFeed');
+
+        await nativeTokenMarket
+          .connect(alice)
+          .deposit(alice.address, { value: parseEther('10') });
+
+        await priceFeed.setPrice(
+          BNB_USD_PRICE.sub(parseEther('1')).div(
+            ethers.BigNumber.from(10).pow(10)
+          )
+        );
+
+        await priceOracle.setUSDFeed(WRAPPED_NATIVE_TOKEN, priceFeed.address);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [BORROW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [
+                    alice.address,
+                    MAX_LTV_RATIO.mul(
+                      BNB_USD_PRICE.mul(parseEther('10')).div(parseEther('1'))
+                    ).div(parseEther('1')),
+                  ]
+                ),
+              ]
+            )
+        ).to.rejectedWith('NativeTokenMarket__InsolventCaller()');
+      });
+
+      it('reverts if price oracle returns 0', async () => {
+        const { nativeTokenMarket, alice } = await loadFixture(deployFixture);
+
+        await nativeTokenMarket
+          .connect(alice)
+          .deposit(alice.address, { value: parseEther('10') });
+
+        const zeroPriceOracleFactory = await ethers.getContractFactory(
+          'ZeroPriceOracle'
+        );
+
+        const zeroPriceOracle = await zeroPriceOracleFactory.deploy();
+
+        await nativeTokenMarket.setOracle(zeroPriceOracle.address);
+
+        await expect(
+          nativeTokenMarket
+            .connect(alice)
+            .request(
+              [DEPOSIT_REQUEST, BORROW_REQUEST],
+              [
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, parseEther('10')]
+                ),
+                defaultAbiCoder.encode(
+                  ['address', 'uint256'],
+                  [alice.address, parseEther('1000')]
+                ),
+              ],
+              { value: parseEther('10') }
+            )
+        ).to.rejectedWith('NativeTokenMarket__InvalidExchangeRate()');
+      });
+    });
+
+    it('repays loans', async () => {
+      const { nativeTokenMarket, alice, owner, dinero } = await loadFixture(
+        deployFixture
+      );
+
+      await nativeTokenMarket
+        .connect(alice)
+        .request(
+          [DEPOSIT_REQUEST, BORROW_REQUEST],
+          [
+            defaultAbiCoder.encode(
+              ['address', 'uint256'],
+              [alice.address, parseEther('10')]
+            ),
+            defaultAbiCoder.encode(
+              ['address', 'uint256'],
+              [alice.address, parseEther('1000')]
+            ),
+          ],
+          { value: parseEther('10') }
+        );
+
+      const loan = await nativeTokenMarket.loan();
+      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+
+      expect(loan.base).to.be.equal(parseEther('1000'));
+      expect(loan.elastic).to.be.equal(parseEther('1000'));
+      expect(aliceAccount.principal).to.be.equal(parseEther('1000'));
+
+      await expect(
+        nativeTokenMarket
+          .connect(owner)
+          .request(
+            [REPAY_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, parseEther('500')]
+              ),
+            ]
+          )
+      )
+        .to.emit(nativeTokenMarket, 'Repay')
+        .withArgs(owner.address, alice.address, parseEther('500'), anyUint)
+        .to.emit(dinero, 'Transfer')
+        .withArgs(owner.address, ethers.constants.AddressZero, anyUint)
+        .to.emit(nativeTokenMarket, 'Accrue');
+
+      const loan2 = await nativeTokenMarket.loan();
+      const aliceAccount2 = await nativeTokenMarket.userAccount(alice.address);
+
+      expect(loan2.base).to.be.equal(parseEther('1000').sub(parseEther('500')));
+
+      expect(loan2.elastic).to.be.closeTo(
+        loan.elastic.sub(parseEther('500')),
+        parseEther('0.001')
+      );
+
+      expect(aliceAccount2.principal).to.be.equal(
+        parseEther('1000').sub(parseEther('500'))
+      );
     });
   });
 });

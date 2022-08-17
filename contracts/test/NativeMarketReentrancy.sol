@@ -52,3 +52,21 @@ contract NativeTokenMarketBorrowReentrancy {
         market.borrow(address(this), 1);
     }
 }
+
+contract NativeTokenMarketRequestReentrancy {
+    NativeTokenMarket internal market;
+
+    constructor(NativeTokenMarket _market) {
+        market = _market;
+    }
+
+    receive() external payable {
+        uint256[] memory actions = new uint256[](1);
+        actions[0] = 1;
+
+        bytes[] memory args = new bytes[](1);
+        args[0] = "";
+
+        market.request(actions, args);
+    }
+}

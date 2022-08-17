@@ -18,6 +18,7 @@ import {
   TestERC20Market,
 } from '../typechain-types';
 import {
+  APPROX_BTC_PRICE,
   BORROW_REQUEST,
   BTC_USD_PRICE_FEED,
   deploy,
@@ -31,8 +32,6 @@ import {
 } from './utils';
 
 const { parseEther, defaultAbiCoder } = ethers.utils;
-
-const APPROX_BTC_PRICE = ethers.BigNumber.from('41629290000000000000000');
 
 const INTEREST_RATE = BigNumber.from(12e8);
 
@@ -506,6 +505,7 @@ describe('ERC20Market', function () {
       ).to.rejectedWith('ERC20Market__InvalidExchangeRate()');
     });
   });
+
   describe('function: repay', function () {
     it('repays loans', async () => {
       const { erc20Market, alice, owner, dinero } = await loadFixture(

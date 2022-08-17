@@ -120,14 +120,14 @@ contract LPFreeMarket is
                        STORAGE  SLOT 0                            */
 
     // Interest Swap Router address
-    IRouter public ROUTER;
+    IRouter internal ROUTER;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 1                            */
 
     // Dinero address
-    IDinero public DNR;
+    IDinero internal DNR;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
@@ -140,14 +140,14 @@ contract LPFreeMarket is
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 3                            */
 
-    ICasaDePapel public CASA_DE_PAPEL;
+    ICasaDePapel internal CASA_DE_PAPEL;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
                        STORAGE  SLOT 4                            */
 
     // Contract uses Chainlink to obtain the price in USD with 18 decimals
-    IPriceOracle public ORACLE;
+    IPriceOracle internal ORACLE;
 
     // A fee that will be charged as a penalty of being liquidated.
     uint96 public liquidationFee;
@@ -157,7 +157,7 @@ contract LPFreeMarket is
                        STORAGE  SLOT 5                            */
 
     // Governance token for Interest Protocol
-    address public IPX;
+    address internal IPX;
 
     // The current master chef farm being used.
     uint96 public POOL_ID;
@@ -170,7 +170,7 @@ contract LPFreeMarket is
     uint128 public maxLTVRatio;
 
     // total amount of staking token in the contract
-    uint128 public totalAmount;
+    uint128 public totalCollateral;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
@@ -330,7 +330,7 @@ contract LPFreeMarket is
         rewards = rewards.uSub(fee);
 
         // Update the state
-        totalRewardsPerToken += rewards.fdiv(totalAmount);
+        totalRewardsPerToken += rewards.fdiv(totalCollateral);
 
         // Pay the `msg.sender` the fee.
         _safeIPXTransfer(_msgSender(), fee);
@@ -624,16 +624,16 @@ contract LPFreeMarket is
         // Save storage state in memory to save gas.
         Account memory user = userAccount[to];
 
-        uint256 _totalAmount = totalAmount;
+        uint256 _totalCollateral = totalCollateral;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
         // If there are no tokens deposited, we do not have to update the current rewards.
-        if (_totalAmount != 0) {
+        if (_totalCollateral != 0) {
             // Get rewards currently in the {COLLATERAL} pool.
-            _totalRewardsPerToken += _depositFarm(0).fdiv(_totalAmount);
+            _totalRewardsPerToken += _depositFarm(0).fdiv(_totalCollateral);
             // Reinvest all {IPX} rewards into the IPX pool.
             // The functions on this block send pending {IPX} to this contract. Therefore, we need to update the {_totalRewardsPerAccount}.
-            _totalRewardsPerToken += _stakeIPX().fdiv(_totalAmount);
+            _totalRewardsPerToken += _stakeIPX().fdiv(_totalCollateral);
         }
 
         unchecked {
@@ -649,7 +649,7 @@ contract LPFreeMarket is
         COLLATERAL.safeTransferFrom(_msgSender(), address(this), amount);
 
         // Update local State
-        _totalAmount += amount;
+        _totalCollateral += amount;
 
         unchecked {
             user.collateral += amount.toUint128();
@@ -667,7 +667,7 @@ contract LPFreeMarket is
 
         // Update Global state
         userAccount[to] = user;
-        totalAmount = _totalAmount.toUint128();
+        totalCollateral = _totalCollateral.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
         emit Deposit(_msgSender(), to, amount);
@@ -688,15 +688,15 @@ contract LPFreeMarket is
             revert LPFreeMarket__InvalidWithdrawAmount();
 
         // Save storage state in memory to save gas.
-        uint256 _totalAmount = totalAmount;
+        uint256 _totalCollateral = totalCollateral;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
         // The {Vault} contract ensures that the `amount` is greater than 0.
-        // It also ensured that the {totalAmount} is greater than 0.
+        // It also ensured that the {totalCollateral} is greater than 0.
         // We withdraw from the {CASA_DE_PAPEL} the desired `amount`.
-        _totalRewardsPerToken += _withdrawFarm(amount).fdiv(_totalAmount);
+        _totalRewardsPerToken += _withdrawFarm(amount).fdiv(_totalCollateral);
         // Collect the current rewards in the {IPX} pool to properly update {_totalRewardsPerAmount}.
-        _totalRewardsPerToken += _unstakeIPX(0).fdiv(_totalAmount);
+        _totalRewardsPerToken += _unstakeIPX(0).fdiv(_totalCollateral);
 
         // Calculate how many rewards the user is entitled before this deposit
         uint256 rewards = _totalRewardsPerToken.fmul(user.collateral) -
@@ -704,7 +704,7 @@ contract LPFreeMarket is
 
         unchecked {
             // Update local state
-            _totalAmount -= amount;
+            _totalCollateral -= amount;
             user.collateral -= amount.toUint128();
             // Add all accrued rewards. As this contract only sends the rewards on withdraw.
             rewards += user.rewards;
@@ -734,14 +734,14 @@ contract LPFreeMarket is
         }
 
         // If the Vault still has assets, we need to update the global  state as usual.
-        if (_totalAmount != 0) {
+        if (_totalCollateral != 0) {
             // Reset totalRewardsPerAmount if the pool is totally empty
             totalRewardsPerToken = _totalRewardsPerToken;
             user.rewardDebt = _totalRewardsPerToken.fmul(user.collateral);
-            totalAmount = _totalAmount.toUint128();
+            totalCollateral = _totalCollateral.toUint128();
         } else {
             // If the Vault does not have any {COLLATERAL}, reset the global state.
-            delete totalAmount;
+            delete totalCollateral;
             delete totalRewardsPerToken;
             delete user.rewardDebt;
         }
