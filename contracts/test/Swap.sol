@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 contract Swap {
     event SellOneToken();
     event SellTwoTokens();
+    event SellNativeToken();
 
     function sellTwoTokens(
         bytes calldata data,
@@ -24,4 +25,14 @@ contract Swap {
     ) external {
         emit SellOneToken();
     }
+
+    function sellNativeToken(
+        bytes calldata data,
+        uint256 amount,
+        uint256 debt
+    ) external {
+        emit SellNativeToken();
+    }
+
+    receive() external payable {}
 }

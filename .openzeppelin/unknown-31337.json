@@ -57,11 +57,6 @@
       "kind": "uups"
     },
     {
-      "address": "0x119D963FF798E1A29249182ea9b5C9057Ef24547",
-      "txHash": "0x85a5f2e0777442ded8d1c8f7692f20c6e996c434d2dd88065fb6701383be3087",
-      "kind": "uups"
-    },
-    {
       "address": "0x9cEf3df356429d6A49236D9488da8ce52b721eB6",
       "txHash": "0x7b0e9101a22a3affb1ccb4770d1975cfd214212ba3730f74a64a42f6821c4086",
       "kind": "uups"
@@ -152,6 +147,11 @@
       "kind": "uups"
     },
     {
+      "address": "0xC7116c3dD488712Eb056Ec18870df17D5aBAe481",
+      "txHash": "0x376fa025521c6b6169f82cc3b11da6e34c28172f18733d0b10e57e00110c2e3e",
+      "kind": "uups"
+    },
+    {
       "address": "0x03E67e085e65B361c1A5cf17d8F1EcfEbAC1ccfB",
       "txHash": "0x5dd7813481065fddb6c41c889ae7eb641fcfe09dfa60be0b9e0b5c1f104040f7",
       "kind": "uups"
@@ -182,8 +182,8 @@
       "kind": "uups"
     },
     {
-      "address": "0xC7116c3dD488712Eb056Ec18870df17D5aBAe481",
-      "txHash": "0x376fa025521c6b6169f82cc3b11da6e34c28172f18733d0b10e57e00110c2e3e",
+      "address": "0x119D963FF798E1A29249182ea9b5C9057Ef24547",
+      "txHash": "0xdd3c04a5e4128fb5bc86a016cc657c11fae31031905fa1890dddce52156c0ac0",
       "kind": "uups"
     },
     {
@@ -800,7 +800,7 @@
     },
     "624bef5a4bf60863b2883fc7fafcc32576099abfe149ddf9bccbd5006478e5ac": {
       "address": "0x3D5a8E8348418a5051Dbe91863562A915E1C0FC0",
-      "txHash": "0x11c07c504c928abaabad909a2d934da81f3abdc547ec7f06058fa8aef88ddeb0",
+      "txHash": "0x072c3381d26f8da27bb0b45aba6a560148b097fdda8c62d8d8af68d7c05a1da4",
       "layout": {
         "storage": [
           {
@@ -1057,7 +1057,7 @@
     },
     "d766ac9d7129499d9f721bebd76e83c29f29ec1ed92e7207d3776dce4a7030b9": {
       "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
-      "txHash": "0xde8ea3f88d860288b2fa12348ae3dc688d86abf7c083d2056630373181151f57",
+      "txHash": "0x527a9648570b313eda97b17b3ffddc3fc508383854283dc26f0c15b194df8c7f",
       "layout": {
         "storage": [
           {
@@ -1123,7 +1123,7 @@
             "slot": "201",
             "type": "t_contract(IDinero)7671",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:149"
+            "src": "contracts/ERC20Market.sol:150"
           },
           {
             "label": "treasury",
@@ -1131,7 +1131,7 @@
             "slot": "202",
             "type": "t_address",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:156"
+            "src": "contracts/ERC20Market.sol:157"
           },
           {
             "label": "COLLATERAL",
@@ -1139,7 +1139,7 @@
             "slot": "203",
             "type": "t_address",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:163"
+            "src": "contracts/ERC20Market.sol:164"
           },
           {
             "label": "liquidationFee",
@@ -1147,15 +1147,15 @@
             "slot": "203",
             "type": "t_uint96",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:166"
+            "src": "contracts/ERC20Market.sol:167"
           },
           {
             "label": "ORACLE",
             "offset": 0,
             "slot": "204",
-            "type": "t_contract(IPriceOracle)20126",
+            "type": "t_contract(IPriceOracle)20241",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:173"
+            "src": "contracts/ERC20Market.sol:174"
           },
           {
             "label": "maxBorrowAmount",
@@ -1163,7 +1163,7 @@
             "slot": "205",
             "type": "t_uint128",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:181"
+            "src": "contracts/ERC20Market.sol:182"
           },
           {
             "label": "maxLTVRatio",
@@ -1171,7 +1171,7 @@
             "slot": "205",
             "type": "t_uint128",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:184"
+            "src": "contracts/ERC20Market.sol:185"
           },
           {
             "label": "loan",
@@ -1179,23 +1179,23 @@
             "slot": "206",
             "type": "t_struct(Rebase)6973_storage",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:191"
+            "src": "contracts/ERC20Market.sol:192"
           },
           {
             "label": "loanTerms",
             "offset": 0,
             "slot": "207",
-            "type": "t_struct(LoanTerms)15193_storage",
+            "type": "t_struct(LoanTerms)15194_storage",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:198"
+            "src": "contracts/ERC20Market.sol:199"
           },
           {
             "label": "userAccount",
             "offset": 0,
             "slot": "209",
-            "type": "t_mapping(t_address,t_struct(Account)15184_storage)",
+            "type": "t_mapping(t_address,t_struct(Account)15185_storage)",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:206"
+            "src": "contracts/ERC20Market.sol:207"
           }
         ],
         "types": {
@@ -1219,15 +1219,15 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20126": {
+          "t_contract(IPriceOracle)20241": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Account)15184_storage)": {
+          "t_mapping(t_address,t_struct(Account)15185_storage)": {
             "label": "mapping(address => struct ERC20Market.Account)",
             "numberOfBytes": "32"
           },
-          "t_struct(Account)15184_storage": {
+          "t_struct(Account)15185_storage": {
             "label": "struct ERC20Market.Account",
             "members": [
               {
@@ -1245,7 +1245,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(LoanTerms)15193_storage": {
+          "t_struct(LoanTerms)15194_storage": {
             "label": "struct ERC20Market.LoanTerms",
             "members": [
               {
@@ -1314,7 +1314,7 @@
     },
     "edfd5a6057ea90245b79b438add17be836f3bf5a21d58d0076d4fafa915fe23f": {
       "address": "0xd3d0d598E6BD0a6B667c4e8B0C3C11c20bb1f089",
-      "txHash": "0x9e66ac8a6a6ec88e44c01a084451b2a546e386ae4fd02192f092faf60d1cf1f0",
+      "txHash": "0x9fddb593596c8fbccedf1ebd954aa7ee47f23ba72d93bf66bce48196b100a937",
       "layout": {
         "storage": [
           {
@@ -1380,7 +1380,7 @@
             "slot": "201",
             "type": "t_contract(IDinero)7671",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:149"
+            "src": "contracts/ERC20Market.sol:150"
           },
           {
             "label": "treasury",
@@ -1388,7 +1388,7 @@
             "slot": "202",
             "type": "t_address",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:156"
+            "src": "contracts/ERC20Market.sol:157"
           },
           {
             "label": "COLLATERAL",
@@ -1396,7 +1396,7 @@
             "slot": "203",
             "type": "t_address",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:163"
+            "src": "contracts/ERC20Market.sol:164"
           },
           {
             "label": "liquidationFee",
@@ -1404,15 +1404,15 @@
             "slot": "203",
             "type": "t_uint96",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:166"
+            "src": "contracts/ERC20Market.sol:167"
           },
           {
             "label": "ORACLE",
             "offset": 0,
             "slot": "204",
-            "type": "t_contract(IPriceOracle)20126",
+            "type": "t_contract(IPriceOracle)20241",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:173"
+            "src": "contracts/ERC20Market.sol:174"
           },
           {
             "label": "maxBorrowAmount",
@@ -1420,7 +1420,7 @@
             "slot": "205",
             "type": "t_uint128",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:181"
+            "src": "contracts/ERC20Market.sol:182"
           },
           {
             "label": "maxLTVRatio",
@@ -1428,7 +1428,7 @@
             "slot": "205",
             "type": "t_uint128",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:184"
+            "src": "contracts/ERC20Market.sol:185"
           },
           {
             "label": "loan",
@@ -1436,23 +1436,23 @@
             "slot": "206",
             "type": "t_struct(Rebase)6973_storage",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:191"
+            "src": "contracts/ERC20Market.sol:192"
           },
           {
             "label": "loanTerms",
             "offset": 0,
             "slot": "207",
-            "type": "t_struct(LoanTerms)15193_storage",
+            "type": "t_struct(LoanTerms)15194_storage",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:198"
+            "src": "contracts/ERC20Market.sol:199"
           },
           {
             "label": "userAccount",
             "offset": 0,
             "slot": "209",
-            "type": "t_mapping(t_address,t_struct(Account)15184_storage)",
+            "type": "t_mapping(t_address,t_struct(Account)15185_storage)",
             "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:206"
+            "src": "contracts/ERC20Market.sol:207"
           }
         ],
         "types": {
@@ -1476,15 +1476,15 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20126": {
+          "t_contract(IPriceOracle)20241": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Account)15184_storage)": {
+          "t_mapping(t_address,t_struct(Account)15185_storage)": {
             "label": "mapping(address => struct ERC20Market.Account)",
             "numberOfBytes": "32"
           },
-          "t_struct(Account)15184_storage": {
+          "t_struct(Account)15185_storage": {
             "label": "struct ERC20Market.Account",
             "members": [
               {
@@ -1502,7 +1502,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(LoanTerms)15193_storage": {
+          "t_struct(LoanTerms)15194_storage": {
             "label": "struct ERC20Market.LoanTerms",
             "members": [
               {
@@ -1570,8 +1570,8 @@
       }
     },
     "14ea0ef87852aa6cd1c82faeafa83cfce0909f0f08589ec14586251c252f9063": {
-      "address": "0xCd86135176a1e054912EC5CFbe6B6ACf0C36c81e",
-      "txHash": "0x8a61fd8c310c8a2b109f2ad6662dd2974769fa687a2b38ed3d5c948d9990c857",
+      "address": "0xc9a1c15d6B5DB1DffC067CA23B68C8aa99D042C1",
+      "txHash": "0x8c9af40306762c112479f1f8f2083720b3dfb8e37ffe849c667ee7a5d4b3fd33",
       "layout": {
         "storage": [
           {

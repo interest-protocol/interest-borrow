@@ -70,3 +70,19 @@ contract NativeTokenMarketRequestReentrancy {
         market.request(actions, args);
     }
 }
+
+contract NativeTokenMarketLiquidateReentrancy {
+    NativeTokenMarket internal market;
+
+    constructor(NativeTokenMarket _market) {
+        market = _market;
+    }
+
+    receive() external payable {
+        address[] memory accounts = new address[](1);
+
+        uint256[] memory principals = new uint256[](1);
+
+        market.liquidate(accounts, principals, address(this), "");
+    }
+}

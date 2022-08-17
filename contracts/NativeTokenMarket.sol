@@ -445,8 +445,9 @@ contract NativeTokenMarket is
             uint256 debt = _loan.toElastic(principal, true);
 
             // How much collateral is needed to cover the loan + fees.
-            // Since Dinero is always USD we can calculate this way.
+            // Since Dinero is always pegged to USD we can calculate this way.
             uint256 collateralToCover = debt.fdiv(_exchangeRate);
+
             // Calculate the collateralFee (for the liquidator and the protocol)
             uint256 fee = collateralToCover.fmul(liquidationFee);
 
