@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../../PriceOracle.sol";
+import "../../ERC20Market.sol";
 
-contract PriceOracleV2 is PriceOracle {
+contract ERC20MarketV2 is ERC20Market {
     function version() external pure returns (string memory) {
         return "v2";
     }

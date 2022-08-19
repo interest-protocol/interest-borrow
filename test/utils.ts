@@ -67,6 +67,12 @@ export const upgrade = async (
 
 export const BTC_USD_PRICE_FEED = '0x264990fbd0a4796a3e3d8e37c4d5f87a3aca5ebf';
 
+export const BNB_USD_PRICE_FEED = '0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE';
+
+export const BNB_USD_PRICE = ethers.BigNumber.from('417349361890000000000');
+
+export const BTC_USD_PRICE = ethers.BigNumber.from('41629290000000000000000');
+
 export const ETHER_USD_PRICE_FEED =
   '0x9ef1b8c0e4f7dc8bf5719ea496883dc6401d5b2e';
 
@@ -83,3 +89,24 @@ export function sqrt(value: BigNumber) {
   }
   return y;
 }
+
+export const MINTER_ROLE = ethers.utils.solidityKeccak256(
+  ['string'],
+  ['MINTER_ROLE']
+);
+
+export const DEVELOPER_ROLE = ethers.utils.solidityKeccak256(
+  ['string'],
+  ['DEVELOPER_ROLE']
+);
+
+export const DEPOSIT_REQUEST = 0;
+
+export const WITHDRAW_REQUEST = 1;
+
+export const BORROW_REQUEST = 2;
+
+export const REPAY_REQUEST = 3;
+
+export const WRAPPED_NATIVE_TOKEN =
+  '0x2F472b32b8041E51e53EeC52e87c7060EA9C7eE8';

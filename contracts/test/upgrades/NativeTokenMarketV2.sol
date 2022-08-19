@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../../PriceOracle.sol";
+import "../../NativeTokenMarket.sol";
 
-contract PriceOracleV2 is PriceOracle {
+contract NativeTokenMarketV2 is NativeTokenMarket {
     function version() external pure returns (string memory) {
         return "v2";
     }
