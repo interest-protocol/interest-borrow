@@ -18,8 +18,8 @@ import {
   TestERC20Market,
 } from '../typechain-types';
 import {
-  APPROX_BTC_PRICE,
   BORROW_REQUEST,
+  BTC_USD_PRICE,
   BTC_USD_PRICE_FEED,
   deploy,
   deployUUPS,
@@ -334,8 +334,8 @@ describe('ERC20Market', function () {
         .to.emit(btc, 'Transfer')
         .withArgs(alice.address, erc20Market.address, parseEther('10'));
 
-      const aliceAccount = await erc20Market.userAccount(alice.address);
-      const ownerAccount = await erc20Market.userAccount(owner.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
+      const ownerAccount = await erc20Market.accountOf(owner.address);
 
       expect(aliceAccount.collateral).to.be.equal(0);
       expect(ownerAccount.collateral).to.be.equal(parseEther('10'));
@@ -382,7 +382,7 @@ describe('ERC20Market', function () {
         .withArgs(erc20Market.address, owner.address, parseEther('2'));
 
       expect(
-        (await erc20Market.userAccount(alice.address)).collateral
+        (await erc20Market.accountOf(alice.address)).collateral
       ).to.be.equal(parseEther('8'));
     });
 
@@ -399,7 +399,7 @@ describe('ERC20Market', function () {
         .borrow(alice.address, parseEther('200000'));
 
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(2).div(BigNumber.from(10).pow(10))
+        BTC_USD_PRICE.div(2).div(BigNumber.from(10).pow(10))
       );
 
       await priceOracle.setUSDFeed(btc.address, priceFeed.address);
@@ -430,7 +430,7 @@ describe('ERC20Market', function () {
       await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
 
       const loan = await erc20Market.loan();
-      const aliceAccount = await erc20Market.userAccount(alice.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
 
       expect(loan.elastic).to.be.equal(0);
       expect(loan.base).to.be.equal(0);
@@ -454,7 +454,7 @@ describe('ERC20Market', function () {
         );
 
       const loan2 = await erc20Market.loan();
-      const aliceAccount2 = await erc20Market.userAccount(alice.address);
+      const aliceAccount2 = await erc20Market.accountOf(alice.address);
 
       expect(loan2.elastic).to.be.equal(parseEther('10000'));
       expect(loan2.base).to.be.equal(parseEther('10000'));
@@ -477,7 +477,7 @@ describe('ERC20Market', function () {
       await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
 
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(2).div(BigNumber.from(10).pow(10))
+        BTC_USD_PRICE.div(2).div(BigNumber.from(10).pow(10))
       );
 
       await priceOracle.setUSDFeed(btc.address, priceFeed.address);
@@ -519,7 +519,7 @@ describe('ERC20Market', function () {
         .borrow(alice.address, parseEther('100000'));
 
       const loan = await erc20Market.loan();
-      const aliceAccount = await erc20Market.userAccount(alice.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
 
       expect(loan.base).to.be.equal(parseEther('100000'));
       expect(loan.elastic).to.be.equal(parseEther('100000'));
@@ -535,7 +535,7 @@ describe('ERC20Market', function () {
         .to.emit(erc20Market, 'Accrue');
 
       const loan2 = await erc20Market.loan();
-      const aliceAccount2 = await erc20Market.userAccount(alice.address);
+      const aliceAccount2 = await erc20Market.accountOf(alice.address);
 
       expect(loan2.base).to.be.equal(
         parseEther('100000').sub(parseEther('5000'))
@@ -741,8 +741,8 @@ describe('ERC20Market', function () {
         .to.emit(btc, 'Transfer')
         .withArgs(alice.address, erc20Market.address, parseEther('10'));
 
-      const aliceAccount = await erc20Market.userAccount(alice.address);
-      const ownerAccount = await erc20Market.userAccount(owner.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
+      const ownerAccount = await erc20Market.accountOf(owner.address);
 
       expect(aliceAccount.collateral).to.be.equal(0);
       expect(ownerAccount.collateral).to.be.equal(parseEther('10'));
@@ -812,7 +812,7 @@ describe('ERC20Market', function () {
         .withArgs(erc20Market.address, owner.address, parseEther('2'));
 
       expect(
-        (await erc20Market.userAccount(alice.address)).collateral
+        (await erc20Market.accountOf(alice.address)).collateral
       ).to.be.equal(parseEther('8'));
     });
 
@@ -840,7 +840,7 @@ describe('ERC20Market', function () {
         );
 
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(2).div(BigNumber.from(10).pow(10))
+        BTC_USD_PRICE.div(2).div(BigNumber.from(10).pow(10))
       );
 
       await priceOracle.setUSDFeed(btc.address, priceFeed.address);
@@ -894,7 +894,7 @@ describe('ERC20Market', function () {
       await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
 
       const loan = await erc20Market.loan();
-      const aliceAccount = await erc20Market.userAccount(alice.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
 
       expect(loan.elastic).to.be.equal(0);
       expect(loan.base).to.be.equal(0);
@@ -928,7 +928,7 @@ describe('ERC20Market', function () {
         );
 
       const loan2 = await erc20Market.loan();
-      const aliceAccount2 = await erc20Market.userAccount(alice.address);
+      const aliceAccount2 = await erc20Market.accountOf(alice.address);
 
       expect(loan2.elastic).to.be.equal(parseEther('10000'));
       expect(loan2.base).to.be.equal(parseEther('10000'));
@@ -961,7 +961,7 @@ describe('ERC20Market', function () {
       await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
 
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(2).div(BigNumber.from(10).pow(10))
+        BTC_USD_PRICE.div(2).div(BigNumber.from(10).pow(10))
       );
 
       await priceOracle.setUSDFeed(btc.address, priceFeed.address);
@@ -1048,7 +1048,7 @@ describe('ERC20Market', function () {
         );
 
       const loan = await erc20Market.loan();
-      const aliceAccount = await erc20Market.userAccount(alice.address);
+      const aliceAccount = await erc20Market.accountOf(alice.address);
 
       expect(loan.base).to.be.equal(parseEther('100000'));
       expect(loan.elastic).to.be.equal(parseEther('100000'));
@@ -1072,7 +1072,7 @@ describe('ERC20Market', function () {
         .to.emit(erc20Market, 'Accrue');
 
       const loan2 = await erc20Market.loan();
-      const aliceAccount2 = await erc20Market.userAccount(alice.address);
+      const aliceAccount2 = await erc20Market.accountOf(alice.address);
 
       expect(loan2.base).to.be.equal(
         parseEther('100000').sub(parseEther('5000'))
@@ -1125,7 +1125,7 @@ describe('ERC20Market', function () {
 
       const priceFeed: PriceFeed = await deploy('PriceFeed');
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(BigNumber.from(10).pow(10)).div(2)
+        BTC_USD_PRICE.div(BigNumber.from(10).pow(10)).div(2)
       );
 
       await Promise.all([
@@ -1197,9 +1197,9 @@ describe('ERC20Market', function () {
         ownerBTCBalance,
       ] = await Promise.all([
         btc.balanceOf(erc20Market.address),
-        erc20Market.userAccount(alice.address),
-        erc20Market.userAccount(bob.address),
-        erc20Market.userAccount(jose.address),
+        erc20Market.accountOf(alice.address),
+        erc20Market.accountOf(bob.address),
+        erc20Market.accountOf(jose.address),
         erc20Market.loan(),
         dinero.balanceOf(owner.address),
         btc.balanceOf(owner.address),
@@ -1256,7 +1256,7 @@ describe('ERC20Market', function () {
           []
         )
       )
-        .to.emit(erc20Market, 'Liquidated')
+        .to.emit(erc20Market, 'Liquidate')
         .withArgs(
           owner.address,
           alice.address,
@@ -1265,7 +1265,7 @@ describe('ERC20Market', function () {
           anyUint,
           anyUint
         )
-        .to.emit(erc20Market, 'Liquidated')
+        .to.emit(erc20Market, 'Liquidate')
         .withArgs(
           owner.address,
           jose.address,
@@ -1291,16 +1291,16 @@ describe('ERC20Market', function () {
         ownerBTCBalanc2,
       ] = await Promise.all([
         btc.balanceOf(erc20Market.address),
-        erc20Market.userAccount(alice.address),
-        erc20Market.userAccount(bob.address),
-        erc20Market.userAccount(jose.address),
+        erc20Market.accountOf(alice.address),
+        erc20Market.accountOf(bob.address),
+        erc20Market.accountOf(jose.address),
         erc20Market.loan(),
         dinero.balanceOf(owner.address),
         erc20Market.loanTerms(),
         btc.balanceOf(owner.address),
       ]);
 
-      const collateralLiquidated = joseAccount.collateral
+      const collateralLiquidate = joseAccount.collateral
         .sub(joseAccount2.collateral)
         .add(aliceAccount.collateral.sub(aliceAccount2.collateral));
 
@@ -1323,7 +1323,7 @@ describe('ERC20Market', function () {
 
       expect(aliceAccount2.collateral).to.be.closeTo(
         aliceAccount.collateral.sub(
-          collateralLiquidated.mul(alicePrincipalRepaid).div(principalRepaid)
+          collateralLiquidate.mul(alicePrincipalRepaid).div(principalRepaid)
         ),
         1
       );
@@ -1332,7 +1332,7 @@ describe('ERC20Market', function () {
 
       expect(joseAccount2.collateral).to.be.closeTo(
         joseAccount.collateral.sub(
-          collateralLiquidated.mul(josePrincipalRepaid).div(principalRepaid)
+          collateralLiquidate.mul(josePrincipalRepaid).div(principalRepaid)
         ),
         1
       );
@@ -1349,7 +1349,7 @@ describe('ERC20Market', function () {
       // Liquidator got compensated for liquidating
       expect(ownerBTCBalanc2).to.be.equal(
         ownerBTCBalance
-          .add(collateralLiquidated)
+          .add(collateralLiquidate)
           .sub(loanTerms2.collateralEarned)
       );
 
@@ -1368,7 +1368,7 @@ describe('ERC20Market', function () {
 
       const priceFeed: PriceFeed = await deploy('PriceFeed');
       await priceFeed.setPrice(
-        APPROX_BTC_PRICE.div(BigNumber.from(10).pow(10)).div(2)
+        BTC_USD_PRICE.div(BigNumber.from(10).pow(10)).div(2)
       );
 
       await Promise.all([
@@ -1448,7 +1448,7 @@ describe('ERC20Market', function () {
           ethers.constants.HashZero
         )
       )
-        .to.emit(erc20Market, 'Liquidated')
+        .to.emit(erc20Market, 'Liquidate')
         .withArgs(
           owner.address,
           alice.address,
@@ -1457,7 +1457,7 @@ describe('ERC20Market', function () {
           anyUint,
           anyUint
         )
-        .to.emit(erc20Market, 'Liquidated')
+        .to.emit(erc20Market, 'Liquidate')
         .withArgs(
           owner.address,
           jose.address,
@@ -1492,7 +1492,7 @@ describe('ERC20Market', function () {
       await erc20Market.connect(alice).deposit(alice.address, parseEther('10'));
 
       expect(
-        (await erc20Market.userAccount(alice.address)).collateral
+        (await erc20Market.accountOf(alice.address)).collateral
       ).to.be.equal(parseEther('10'));
 
       const erc20MarketV2: ERC20MarketV2 = await upgrade(
@@ -1502,7 +1502,7 @@ describe('ERC20Market', function () {
 
       const [version, aliceAccount] = await Promise.all([
         erc20MarketV2.version(),
-        erc20MarketV2.userAccount(alice.address),
+        erc20MarketV2.accountOf(alice.address),
       ]);
 
       expect(version).to.be.equal('v2');

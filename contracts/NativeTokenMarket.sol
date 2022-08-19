@@ -16,8 +16,6 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
-import "hardhat/console.sol";
-
 contract NativeTokenMarket is
     Initializable,
     SafeTransferErrors,
@@ -73,7 +71,7 @@ contract NativeTokenMarket is
 
     event InterestRate(uint256 rate);
 
-    event Liquidated(
+    event Liquidate(
         address indexed liquidator,
         address indexed debtor,
         uint256 principal,
@@ -198,7 +196,7 @@ contract NativeTokenMarket is
                        STORAGE  SLOT 7                            */
 
     // How much principal an address has borrowed.
-    mapping(address => Account) public userAccount;
+    mapping(address => Account) public accountOf;
 
     //////////////////////////////////////////////////////////////
 
@@ -257,7 +255,7 @@ contract NativeTokenMarket is
         _;
         if (
             !_isSolvent(
-                _msgSender(),
+                msg.sender,
                 ORACLE.getNativeTokenUSDPrice(1 ether) // Price of one token
             )
         ) revert NativeTokenMarket__InsolventCaller();
@@ -339,7 +337,7 @@ contract NativeTokenMarket is
 
     // Accept direct native token transfers
     receive() external payable lock {
-        _deposit(_msgSender(), msg.value);
+        _deposit(msg.sender, msg.value);
     }
 
     /**
@@ -382,7 +380,7 @@ contract NativeTokenMarket is
         if (checkForSolvency)
             if (
                 !_isSolvent(
-                    _msgSender(),
+                    msg.sender,
                     ORACLE.getNativeTokenUSDPrice(1 ether) // Price of one token
                 )
             ) revert NativeTokenMarket__InsolventCaller();
@@ -429,16 +427,16 @@ contract NativeTokenMarket is
             // If the user has enough collateral to cover his debt. He cannot be liquidated. Move to the next one.
             if (_isSolvent(account, _exchangeRate)) continue;
 
-            Account memory _userAccount = userAccount[account];
+            Account memory userAccount = accountOf[account];
 
             // Liquidator cannot repay more than the what `account` borrowed.
             // Note the liquidator does not need to close the full position.
-            uint256 principal = principals[i].min(_userAccount.principal);
+            uint256 principal = principals[i].min(userAccount.principal);
 
             unchecked {
                 // The minimum value is it's own value. So this can never underflow.
                 // Update the userLoan global state
-                _userAccount.principal -= principal.toUint128();
+                userAccount.principal -= principal.toUint128();
             }
 
             // We round up to give an edge to the protocol and liquidator.
@@ -452,13 +450,13 @@ contract NativeTokenMarket is
             uint256 fee = collateralToCover.fmul(liquidationFee);
 
             // Remove the collateral from the account. We can consider the debt paid.
-            _userAccount.collateral -= (collateralToCover + fee).toUint128();
+            userAccount.collateral -= (collateralToCover + fee).toUint128();
 
             // Update global state
-            userAccount[account] = _userAccount;
+            accountOf[account] = userAccount;
 
-            emit Liquidated(
-                _msgSender(),
+            emit Liquidate(
+                msg.sender,
                 account,
                 principal,
                 debt,
@@ -506,7 +504,7 @@ contract NativeTokenMarket is
             );
 
         // This step we destroy `DINERO` equivalent to all outstanding debt. This does not include the liquidator fee.
-        DNR.burn(_msgSender(), liquidationInfo.allDebt);
+        DNR.burn(msg.sender, liquidationInfo.allDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -541,20 +539,20 @@ contract NativeTokenMarket is
         if (0 == amount) revert NativeTokenMarket__InvalidAmount();
         if (address(0) == to) revert NativeTokenMarket__InvalidAddress();
 
-        userAccount[to].collateral += amount.toUint128();
+        accountOf[to].collateral += amount.toUint128();
 
-        emit Deposit(_msgSender(), to, amount);
+        emit Deposit(msg.sender, to, amount);
     }
 
     function _withdraw(address to, uint256 amount) internal {
         if (0 == amount) revert NativeTokenMarket__InvalidAmount();
 
-        userAccount[_msgSender()].collateral -= amount.toUint128();
+        accountOf[msg.sender].collateral -= amount.toUint128();
 
         //  We update the balance before sending, so we present reentrancy attacks.
         to.safeTransferNativeToken(amount);
 
-        emit Withdraw(_msgSender(), to, amount);
+        emit Withdraw(msg.sender, to, amount);
     }
 
     /**
@@ -574,13 +572,13 @@ contract NativeTokenMarket is
             revert NativeTokenMarket__MaxBorrowAmountReached();
 
         unchecked {
-            userAccount[_msgSender()].principal += principal.toUint128();
+            accountOf[msg.sender].principal += principal.toUint128();
         }
 
         // Note the `msg.sender` can use his collateral to lend to someone else.
         DNR.mint(to, amount);
 
-        emit Borrow(_msgSender(), to, principal, amount);
+        emit Borrow(msg.sender, to, principal, amount);
     }
 
     /**
@@ -597,12 +595,12 @@ contract NativeTokenMarket is
         (loan, debt) = loan.sub(principal, true);
 
         // Since all debt is in `DINERO`. We can simply burn it from the `msg.sender`
-        DNR.burn(_msgSender(), debt);
+        DNR.burn(msg.sender, debt);
 
         // Update Global state
-        userAccount[account].principal -= principal.toUint128();
+        accountOf[account].principal -= principal.toUint128();
 
-        emit Repay(_msgSender(), account, principal, debt);
+        emit Repay(msg.sender, account, principal, debt);
     }
 
     /**
@@ -620,7 +618,7 @@ contract NativeTokenMarket is
         if (exchangeRate == 0) revert NativeTokenMarket__InvalidExchangeRate();
 
         // How much the user has borrowed.
-        Account memory account = userAccount[user];
+        Account memory account = accountOf[user];
 
         // Account has no open loans. So he is solvent.
         if (account.principal == 0) return true;
@@ -737,7 +735,7 @@ contract NativeTokenMarket is
      */
     function setMaxLTVRatio(uint256 amount) external onlyOwner {
         if (amount > 0.9e18) revert NativeTokenMarket__InvalidMaxLTVRatio();
-        maxLTVRatio = amount.toUint64();
+        maxLTVRatio = amount.toUint96();
         emit MaxTVLRatio(amount);
     }
 
@@ -754,7 +752,7 @@ contract NativeTokenMarket is
      */
     function setLiquidationFee(uint256 amount) external onlyOwner {
         if (amount > 0.15e18) revert NativeTokenMarket__InvalidLiquidationFee();
-        liquidationFee = amount.toUint64();
+        liquidationFee = amount.toUint96();
         emit LiquidationFee(amount);
     }
 
@@ -772,6 +770,9 @@ contract NativeTokenMarket is
     function setInterestRate(uint256 amount) external onlyOwner {
         // 13e8 * 60 * 60 * 24 * 365 / 1e18 = ~ 0.0409968
         if (amount > 13e8) revert NativeTokenMarket__InvalidInterestRate();
+
+        _accrue();
+
         loanTerms.interestRate = amount.toUint128();
         emit InterestRate(amount);
     }

@@ -10,7 +10,8 @@
     "clean": "npx hardhat clean && rimraf cache && rimraf artifacts",
     "compile": "npx hardhat compile",
     "publish": "npm publish contracts --access public",
-    "test:nm": "npx hardhat test ./test/native-token-market.test.ts"
+    "test:nm": "npx hardhat test ./test/native-token-market.test.ts",
+    "test:lpm": "npx hardhat test ./test/lp-free-market.test.ts"
   },
   "keywords": [
     "DeFi",
@@ -24,6 +25,8 @@
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
+    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/hardhat-upgrades": "^1.20.0",
     "@typescript-eslint/eslint-plugin": "^5.30.7",
     "@typescript-eslint/parser": "^5.30.7",
     "dotenv": "^16.0.1",
@@ -46,8 +49,6 @@
     "@interest-protocol/earn": "^1.4.1",
     "@interest-protocol/library": "^1.2.2",
     "@interest-protocol/tokens": "^1.2.0",
-    "@openzeppelin/contracts": "^4.7.3",
-    "@openzeppelin/contracts-upgradeable": "^4.7.1",
-    "@openzeppelin/hardhat-upgrades": "^1.19.0"
+    "@openzeppelin/contracts-upgradeable": "^4.7.1"
   }
 }

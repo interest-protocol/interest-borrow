@@ -72,7 +72,7 @@ contract ERC20Market is
 
     event InterestRate(uint256 rate);
 
-    event Liquidated(
+    event Liquidate(
         address indexed liquidator,
         address indexed debtor,
         uint256 principal,
@@ -204,7 +204,7 @@ contract ERC20Market is
                        STORAGE  SLOT 7                            */
 
     // How much principal an address has borrowed.
-    mapping(address => Account) public userAccount;
+    mapping(address => Account) public accountOf;
 
     //////////////////////////////////////////////////////////////
 
@@ -415,16 +415,16 @@ contract ERC20Market is
             // If the user has enough collateral to cover his debt. He cannot be liquidated. Move to the next one.
             if (_isSolvent(account, _exchangeRate)) continue;
 
-            Account memory _userAccount = userAccount[account];
+            Account memory userAccount = accountOf[account];
 
             // Liquidator cannot repay more than the what `account` borrowed.
             // Note the liquidator does not need to close the full position.
-            uint256 principal = principals[i].min(_userAccount.principal);
+            uint256 principal = principals[i].min(userAccount.principal);
 
             unchecked {
                 // The minimum value is it's own value. So this can never underflow.
                 // Update the userLoan global state
-                _userAccount.principal -= principal.toUint128();
+                userAccount.principal -= principal.toUint128();
             }
 
             // We round up to give an edge to the protocol and liquidator.
@@ -438,12 +438,12 @@ contract ERC20Market is
             uint256 fee = collateralToCover.fmul(liquidationFee);
 
             // Remove the collateral from the account. We can consider the debt paid.
-            _userAccount.collateral -= (collateralToCover + fee).toUint128();
+            userAccount.collateral -= (collateralToCover + fee).toUint128();
 
             // Update global state
-            userAccount[account] = _userAccount;
+            accountOf[account] = userAccount;
 
-            emit Liquidated(
+            emit Liquidate(
                 _msgSender(),
                 account,
                 principal,
@@ -531,7 +531,7 @@ contract ERC20Market is
         // We want to get the tokens before updating the state
         COLLATERAL.safeTransferFrom(_msgSender(), address(this), amount);
 
-        userAccount[to].collateral += amount.toUint128();
+        accountOf[to].collateral += amount.toUint128();
 
         emit Deposit(_msgSender(), to, amount);
     }
@@ -539,7 +539,7 @@ contract ERC20Market is
     function _withdraw(address to, uint256 amount) internal {
         if (0 == amount) revert ERC20Market__InvalidAmount();
 
-        userAccount[_msgSender()].collateral -= amount.toUint128();
+        accountOf[_msgSender()].collateral -= amount.toUint128();
 
         COLLATERAL.safeTransfer(to, amount);
 
@@ -564,7 +564,7 @@ contract ERC20Market is
 
         // loan.elastic will overflow before the principal.
         unchecked {
-            userAccount[_msgSender()].principal += principal.toUint128();
+            accountOf[_msgSender()].principal += principal.toUint128();
         }
 
         // Note the `msg.sender` can use his collateral to lend to someone else.
@@ -590,7 +590,7 @@ contract ERC20Market is
         DNR.burn(_msgSender(), debt);
 
         // Update Global state
-        userAccount[account].principal -= principal.toUint128();
+        accountOf[account].principal -= principal.toUint128();
 
         emit Repay(_msgSender(), account, principal, debt);
     }
@@ -610,7 +610,7 @@ contract ERC20Market is
         if (exchangeRate == 0) revert ERC20Market__InvalidExchangeRate();
 
         // How much the user has borrowed.
-        Account memory account = userAccount[user];
+        Account memory account = accountOf[user];
 
         // Account has no open loans. So he is solvent.
         if (account.principal == 0) return true;
@@ -727,7 +727,7 @@ contract ERC20Market is
      */
     function setMaxLTVRatio(uint256 amount) external onlyOwner {
         if (amount > 0.9e18) revert ERC20Market__InvalidMaxLTVRatio();
-        maxLTVRatio = amount.toUint64();
+        maxLTVRatio = amount.toUint96();
         emit MaxTVLRatio(amount);
     }
 
@@ -744,7 +744,7 @@ contract ERC20Market is
      */
     function setLiquidationFee(uint256 amount) external onlyOwner {
         if (amount > 0.15e18) revert ERC20Market__InvalidLiquidationFee();
-        liquidationFee = amount.toUint64();
+        liquidationFee = amount.toUint96();
         emit LiquidationFee(amount);
     }
 

@@ -365,8 +365,8 @@ describe('Native Token Market', function () {
         .to.emit(nativeTokenMarket, 'Deposit')
         .withArgs(alice.address, owner.address, parseEther('10'));
 
-      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
-      const ownerAccount = await nativeTokenMarket.userAccount(owner.address);
+      const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
+      const ownerAccount = await nativeTokenMarket.accountOf(owner.address);
 
       expect(aliceAccount.collateral).to.be.equal(0);
       expect(ownerAccount.collateral).to.be.equal(parseEther('10'));
@@ -438,7 +438,7 @@ describe('Native Token Market', function () {
         .withArgs(alice.address, owner.address, parseEther('2'));
 
       expect(
-        (await nativeTokenMarket.userAccount(alice.address)).collateral
+        (await nativeTokenMarket.accountOf(alice.address)).collateral
       ).to.be.equal(parseEther('8'));
 
       expect(await owner.getBalance()).to.be.equal(
@@ -529,7 +529,7 @@ describe('Native Token Market', function () {
         .to.emit(nativeTokenMarket, 'Deposit')
         .withArgs(alice.address, alice.address, parseEther('10'));
 
-      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
 
       expect(aliceAccount.collateral).to.be.equal(parseEther('10'));
     });
@@ -578,7 +578,7 @@ describe('Native Token Market', function () {
         .deposit(alice.address, { value: parseEther('10') });
 
       const loan = await nativeTokenMarket.loan();
-      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan.elastic).to.be.equal(0);
       expect(loan.base).to.be.equal(0);
@@ -604,7 +604,7 @@ describe('Native Token Market', function () {
         );
 
       const loan2 = await nativeTokenMarket.loan();
-      const aliceAccount2 = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount2 = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan2.elastic).to.be.equal(parseEther('1000'));
       expect(loan2.base).to.be.equal(parseEther('1000'));
@@ -713,7 +713,7 @@ describe('Native Token Market', function () {
         .borrow(alice.address, parseEther('1000'));
 
       const loan = await nativeTokenMarket.loan();
-      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan.base).to.be.equal(parseEther('1000'));
       expect(loan.elastic).to.be.equal(parseEther('1000'));
@@ -729,7 +729,7 @@ describe('Native Token Market', function () {
         .to.emit(nativeTokenMarket, 'Accrue');
 
       const loan2 = await nativeTokenMarket.loan();
-      const aliceAccount2 = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount2 = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan2.base).to.be.equal(parseEther('1000').sub(parseEther('500')));
 
@@ -990,8 +990,8 @@ describe('Native Token Market', function () {
           .to.emit(nativeTokenMarket, 'Deposit')
           .withArgs(alice.address, owner.address, parseEther('10'));
 
-        const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
-        const ownerAccount = await nativeTokenMarket.userAccount(owner.address);
+        const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
+        const ownerAccount = await nativeTokenMarket.accountOf(owner.address);
 
         expect(aliceAccount.collateral).to.be.equal(0);
         expect(ownerAccount.collateral).to.be.equal(parseEther('10'));
@@ -1096,7 +1096,7 @@ describe('Native Token Market', function () {
           .withArgs(alice.address, owner.address, parseEther('2'));
 
         expect(
-          (await nativeTokenMarket.userAccount(alice.address)).collateral
+          (await nativeTokenMarket.accountOf(alice.address)).collateral
         ).to.be.equal(parseEther('8'));
 
         expect(await owner.getBalance()).to.be.equal(
@@ -1181,7 +1181,7 @@ describe('Native Token Market', function () {
         );
 
         const loan = await nativeTokenMarket.loan();
-        const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+        const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
 
         expect(loan.elastic).to.be.equal(0);
         expect(loan.base).to.be.equal(0);
@@ -1220,9 +1220,7 @@ describe('Native Token Market', function () {
           );
 
         const loan2 = await nativeTokenMarket.loan();
-        const aliceAccount2 = await nativeTokenMarket.userAccount(
-          alice.address
-        );
+        const aliceAccount2 = await nativeTokenMarket.accountOf(alice.address);
 
         expect(loan2.elastic).to.be.equal(parseEther('1000'));
         expect(loan2.base).to.be.equal(parseEther('1000'));
@@ -1349,7 +1347,7 @@ describe('Native Token Market', function () {
         );
 
       const loan = await nativeTokenMarket.loan();
-      const aliceAccount = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan.base).to.be.equal(parseEther('1000'));
       expect(loan.elastic).to.be.equal(parseEther('1000'));
@@ -1375,7 +1373,7 @@ describe('Native Token Market', function () {
         .to.emit(nativeTokenMarket, 'Accrue');
 
       const loan2 = await nativeTokenMarket.loan();
-      const aliceAccount2 = await nativeTokenMarket.userAccount(alice.address);
+      const aliceAccount2 = await nativeTokenMarket.accountOf(alice.address);
 
       expect(loan2.base).to.be.equal(parseEther('1000').sub(parseEther('500')));
 
@@ -1501,9 +1499,9 @@ describe('Native Token Market', function () {
         ownerNativeBalance,
       ] = await Promise.all([
         ethers.provider.getBalance(nativeTokenMarket.address),
-        nativeTokenMarket.userAccount(alice.address),
-        nativeTokenMarket.userAccount(bob.address),
-        nativeTokenMarket.userAccount(jose.address),
+        nativeTokenMarket.accountOf(alice.address),
+        nativeTokenMarket.accountOf(bob.address),
+        nativeTokenMarket.accountOf(jose.address),
         nativeTokenMarket.loan(),
         dinero.balanceOf(owner.address),
         owner.getBalance(),
@@ -1558,7 +1556,7 @@ describe('Native Token Market', function () {
           []
         )
       )
-        .to.emit(nativeTokenMarket, 'Liquidated')
+        .to.emit(nativeTokenMarket, 'Liquidate')
         .withArgs(
           owner.address,
           alice.address,
@@ -1567,7 +1565,7 @@ describe('Native Token Market', function () {
           anyUint,
           anyUint
         )
-        .to.emit(nativeTokenMarket, 'Liquidated')
+        .to.emit(nativeTokenMarket, 'Liquidate')
         .withArgs(
           owner.address,
           jose.address,
@@ -1591,16 +1589,16 @@ describe('Native Token Market', function () {
         ownerNativeBalance2,
       ] = await Promise.all([
         ethers.provider.getBalance(nativeTokenMarket.address),
-        nativeTokenMarket.userAccount(alice.address),
-        nativeTokenMarket.userAccount(bob.address),
-        nativeTokenMarket.userAccount(jose.address),
+        nativeTokenMarket.accountOf(alice.address),
+        nativeTokenMarket.accountOf(bob.address),
+        nativeTokenMarket.accountOf(jose.address),
         nativeTokenMarket.loan(),
         dinero.balanceOf(owner.address),
         nativeTokenMarket.loanTerms(),
         owner.getBalance(),
       ]);
 
-      const collateralLiquidated = joseAccount.collateral
+      const collateralLiquidate = joseAccount.collateral
         .sub(joseAccount2.collateral)
         .add(aliceAccount.collateral.sub(aliceAccount2.collateral));
 
@@ -1623,7 +1621,7 @@ describe('Native Token Market', function () {
 
       expect(aliceAccount2.collateral).to.be.closeTo(
         aliceAccount.collateral.sub(
-          collateralLiquidated.mul(alicePrincipalRepaid).div(principalRepaid)
+          collateralLiquidate.mul(alicePrincipalRepaid).div(principalRepaid)
         ),
         1
       );
@@ -1632,7 +1630,7 @@ describe('Native Token Market', function () {
 
       expect(joseAccount2.collateral).to.be.closeTo(
         joseAccount.collateral.sub(
-          collateralLiquidated.mul(josePrincipalRepaid).div(principalRepaid)
+          collateralLiquidate.mul(josePrincipalRepaid).div(principalRepaid)
         ),
         1
       );
@@ -1649,7 +1647,7 @@ describe('Native Token Market', function () {
       // Liquidator got compensated for liquidating
       expect(ownerNativeBalance2).to.be.closeTo(
         ownerNativeBalance
-          .add(collateralLiquidated)
+          .add(collateralLiquidate)
           .sub(loanTerms2.collateralEarned),
         parseEther('0.01') // TX fee
       );
@@ -1749,7 +1747,7 @@ describe('Native Token Market', function () {
           ethers.constants.HashZero
         )
       )
-        .to.emit(nativeTokenMarket, 'Liquidated')
+        .to.emit(nativeTokenMarket, 'Liquidate')
         .withArgs(
           owner.address,
           alice.address,
@@ -1758,7 +1756,7 @@ describe('Native Token Market', function () {
           anyUint,
           anyUint
         )
-        .to.emit(nativeTokenMarket, 'Liquidated')
+        .to.emit(nativeTokenMarket, 'Liquidate')
         .withArgs(
           owner.address,
           jose.address,
@@ -1814,7 +1812,7 @@ describe('Native Token Market', function () {
         .deposit(alice.address, { value: parseEther('10') });
 
       expect(
-        (await nativeTokenMarket.userAccount(alice.address)).collateral
+        (await nativeTokenMarket.accountOf(alice.address)).collateral
       ).to.be.equal(parseEther('10'));
 
       const nativeTokenMarketV2: NativeTokenMarketV2 = await upgrade(
@@ -1824,7 +1822,7 @@ describe('Native Token Market', function () {
 
       const [version, aliceAccount] = await Promise.all([
         nativeTokenMarketV2.version(),
-        nativeTokenMarketV2.userAccount(alice.address),
+        nativeTokenMarketV2.accountOf(alice.address),
       ]);
 
       expect(version).to.be.equal('v2');
