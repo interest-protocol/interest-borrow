@@ -1670,4 +1670,111 @@ describe('LP Free Market', function () {
       expect(aliceAccount.collateral).to.be.equal(parseEther('2'));
     });
   });
+
+  describe('function: setMaxLTVRatio', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { lpFreeMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        lpFreeMarket.connect(alice).setMaxLTVRatio(1)
+      ).to.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('allows a maximum ltv of 90%', async () => {
+      const { lpFreeMarket } = await loadFixture(deployFixture);
+
+      expect(await lpFreeMarket.maxLTVRatio()).to.be.equal(parseEther('0.5'));
+
+      await expect(lpFreeMarket.setMaxLTVRatio(parseEther('0.9'))).to.emit(
+        lpFreeMarket,
+        'MaxTVLRatio'
+      );
+
+      expect(await lpFreeMarket.maxLTVRatio()).to.be.equal(parseEther('0.9'));
+
+      await expect(
+        lpFreeMarket.setMaxLTVRatio(parseEther('0.91'))
+      ).to.be.rejectedWith('LPFreeMarket__InvalidMaxLTVRatio()');
+    });
+  });
+
+  describe('function: setLiquidationFee', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { lpFreeMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        lpFreeMarket.connect(alice).setLiquidationFee(1)
+      ).to.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('allows a maximum fee of 15%', async () => {
+      const { lpFreeMarket } = await loadFixture(deployFixture);
+
+      expect(await lpFreeMarket.liquidationFee()).to.be.equal(
+        parseEther('0.1')
+      );
+
+      await expect(lpFreeMarket.setLiquidationFee(parseEther('0.15'))).to.emit(
+        lpFreeMarket,
+        'LiquidationFee'
+      );
+
+      expect(await lpFreeMarket.liquidationFee()).to.be.equal(
+        parseEther('0.15')
+      );
+
+      await expect(
+        lpFreeMarket.setLiquidationFee(parseEther('0.151'))
+      ).to.be.rejectedWith('LPFreeMarket__InvalidLiquidationFee()');
+    });
+  });
+
+  describe('function: setTreasury', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { lpFreeMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        lpFreeMarket.connect(alice).setTreasury(ethers.constants.AddressZero)
+      ).to.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('allows the treasury to be addressed', async () => {
+      const { lpFreeMarket, treasury } = await loadFixture(deployFixture);
+
+      expect(await lpFreeMarket.treasury()).to.be.equal(treasury.address);
+
+      await expect(
+        lpFreeMarket.setTreasury(ethers.constants.AddressZero)
+      ).to.emit(lpFreeMarket, 'NewTreasury');
+
+      expect(await lpFreeMarket.treasury()).to.be.equal(
+        ethers.constants.AddressZero
+      );
+    });
+  });
+
+  describe('function: setMaxBorrowAmount', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { lpFreeMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        lpFreeMarket.connect(alice).setMaxBorrowAmount(0)
+      ).to.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('updates the max borrow amount', async () => {
+      const { lpFreeMarket } = await loadFixture(deployFixture);
+
+      expect(await lpFreeMarket.maxBorrowAmount()).to.be.equal(
+        parseEther('1000000')
+      );
+
+      await expect(lpFreeMarket.setMaxBorrowAmount(0)).to.emit(
+        lpFreeMarket,
+        'MaxBorrowAmount'
+      );
+
+      expect(await lpFreeMarket.maxBorrowAmount()).to.be.equal(0);
+    });
+  });
 }).timeout(100000);
