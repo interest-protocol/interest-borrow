@@ -874,7 +874,7 @@ describe('Native Token Market', function () {
       ).to.revertedWith('Ownable: caller is not the owner');
     });
 
-    it('allows a maximum fee of 4%', async () => {
+    it('updates the borrow amount', async () => {
       const { nativeTokenMarket } = await loadFixture(deployFixture);
 
       expect(await nativeTokenMarket.maxBorrowAmount()).to.be.equal(

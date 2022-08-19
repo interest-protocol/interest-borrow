@@ -675,7 +675,7 @@ describe('ERC20Market', function () {
       ).to.revertedWith('Ownable: caller is not the owner');
     });
 
-    it('allows a maximum fee of 4%', async () => {
+    it('updates the max borrow amount', async () => {
       const { erc20Market } = await loadFixture(deployFixture);
 
       expect(await erc20Market.maxBorrowAmount()).to.be.equal(
