@@ -15,7 +15,6 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
-import "./interfaces/IERC20Market.sol";
 
 contract ERC20Market is
     Initializable,

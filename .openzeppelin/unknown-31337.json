@@ -183,32 +183,32 @@
     },
     {
       "address": "0xdAf3111808eecF33B542EFE8D133Df420089759E",
-      "txHash": "0x761f7d5feb630dc02d386aeedd969a39bd8c3e33953b88d128a4353374d1ae05",
+      "txHash": "0xf3982720cf4e84b65d16a12d1e8f7cf07729615b19bb1c5505195262556322e3",
       "kind": "uups"
     },
     {
       "address": "0xE4406411A10F83F07546C87Afd8530f463a7B767",
-      "txHash": "0xcf69471d39cacb713b2058f8d5d9978782820c053ce0d80f5ae0ae550f5863ee",
+      "txHash": "0xc8afbc28639b3e2c922179a01aea697361e529d950025ba5b275d700b8a5f4a5",
       "kind": "uups"
     },
     {
       "address": "0xf651f3A23a7E66599458dEdB6B6f7C55C2903086",
-      "txHash": "0x389ace326cba08782e4479b0c91d6873f000f916ed0bacb53cfd69d6a69f7525",
+      "txHash": "0x9c23c1e9b82262ba0b5d425b9cea100ccf9882654b96de142d26a14fd31958aa",
       "kind": "uups"
     },
     {
       "address": "0x8Bf18e85B2FB7B050343AB2560E497b3Df18a59c",
-      "txHash": "0x34ec1f35fce2befb586c9471716ffb4c572cc8dd2cd7ae7c2910d84d572f9925",
+      "txHash": "0x8032e58e735867f728d3149b6244e16d87918d2b7fe11d76e5d479a330d56632",
       "kind": "uups"
     },
     {
       "address": "0x0c17eB50f1f123E92f7Fc429600974314466321d",
-      "txHash": "0x164fecdab07210db8da76b25d2e9826e4178ac4665138277d8a0c1ff29aab068",
+      "txHash": "0x10b76ef21ffa41b831d44006c4aba66fa1bc43d95995740a00376fe7b8b37735",
       "kind": "uups"
     },
     {
       "address": "0xb16CA24E16c58f817fe627321a0eeb5f9BeBf23F",
-      "txHash": "0x071a3a3208a337db8b7b3e8943ef6d745b982977f357cd01469d685dcc3a7516",
+      "txHash": "0x171771c7d1c1ab776726220feacef1e2ce30124bb7aa10a25114775e57c7cde6",
       "kind": "uups"
     }
   ],
@@ -579,7 +579,7 @@
     },
     "14ea0ef87852aa6cd1c82faeafa83cfce0909f0f08589ec14586251c252f9063": {
       "address": "0x529d912E5280CFC1AD612e40966E4C634DDf15c2",
-      "txHash": "0xb51ec51a01fc1df14a169943d3c5bdb18bc98c767d0a547efa4ed0626d3746ce",
+      "txHash": "0xaf8d56a4b74e28c334e4962b35ae9e0d1330b3adbeba2b30acc3403cc9e3ea5f",
       "layout": {
         "storage": [
           {
@@ -1697,7 +1697,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "204",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "ERC20Market",
             "src": "contracts/ERC20Market.sol:174"
           },
@@ -1763,7 +1763,7 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
@@ -1954,7 +1954,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "204",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "ERC20Market",
             "src": "contracts/ERC20Market.sol:174"
           },
@@ -2020,7 +2020,7 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
@@ -2447,7 +2447,7 @@
     },
     "4ed26ea433be3528754f9636bf1615ed85898960f874a3989a61c330e24a7c93": {
       "address": "0x459CF9a1a496AC928ab0E90a8ef1148d7Acec4B4",
-      "txHash": "0x665461fcf1660a16dc6fe3b8956d72c8fb531c77fbf0fb98dc6fee3ddd8d966d",
+      "txHash": "0x75876882c17a07235e1ba4ba06458b3c9b413871295dd59c435022c4750bdd31",
       "layout": {
         "storage": [
           {
@@ -2543,7 +2543,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "205",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "LPFreeMarket",
             "src": "contracts/LPFreeMarket.sol:158"
           },
@@ -2661,7 +2661,7 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
@@ -2724,7 +2724,7 @@
     },
     "c23e277bee20da6c5a964a9c86a3fbebf8b38711d087f5080db37183895ed4d8": {
       "address": "0x1e22daFae3ed0395a67D1BbDF7cEb545468F5C79",
-      "txHash": "0x08ffddc75ff302bbe6424d729c94da103aa07e225ca4d970b0c5561a512bda5c",
+      "txHash": "0x99aa4f71d32c1ecb8680be914f2e62483827a2480fe500d7abbe0ddad45d1c5e",
       "layout": {
         "storage": [
           {
@@ -2820,7 +2820,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "205",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "LPFreeMarket",
             "src": "contracts/LPFreeMarket.sol:158"
           },
@@ -2938,7 +2938,7 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
@@ -3001,7 +3001,7 @@
     },
     "098c3c6dafefd4f7e48f01ad990c91ffb1f673b9acf8221583b97eb651886c25": {
       "address": "0xA42dF48B4598Da6fB0D8A25C9215647062999053",
-      "txHash": "0xbc78ed65c8ba786741689d798109fe4ad0e67e6daca73155addfdb632fbe18e2",
+      "txHash": "0x6a5ef9d16ef03d94c18a7597b9752842191345354f1b2f9e3204088f4b05401b",
       "layout": {
         "storage": [
           {
@@ -3097,7 +3097,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "203",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:167"
           },
@@ -3129,7 +3129,7 @@
             "label": "loanTerms",
             "offset": 0,
             "slot": "206",
-            "type": "t_struct(LoanTerms)18399_storage",
+            "type": "t_struct(LoanTerms)18398_storage",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:191"
           },
@@ -3137,7 +3137,7 @@
             "label": "accountOf",
             "offset": 0,
             "slot": "208",
-            "type": "t_mapping(t_address,t_struct(Account)18390_storage)",
+            "type": "t_mapping(t_address,t_struct(Account)18389_storage)",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:199"
           }
@@ -3163,15 +3163,15 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Account)18390_storage)": {
+          "t_mapping(t_address,t_struct(Account)18389_storage)": {
             "label": "mapping(address => struct NativeTokenMarket.Account)",
             "numberOfBytes": "32"
           },
-          "t_struct(Account)18390_storage": {
+          "t_struct(Account)18389_storage": {
             "label": "struct NativeTokenMarket.Account",
             "members": [
               {
@@ -3189,7 +3189,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(LoanTerms)18399_storage": {
+          "t_struct(LoanTerms)18398_storage": {
             "label": "struct NativeTokenMarket.LoanTerms",
             "members": [
               {
@@ -3258,7 +3258,7 @@
     },
     "b5fc43f8f951a02501c6ecfefd984f3efc318f4118288a24a1ee8379c596c86b": {
       "address": "0xc952604CAD092D7bc5E17C46933fc0f06E059C2f",
-      "txHash": "0x7980b517760b033558f7a12d396d4cdfc4f27656b80832fee9da30b4d2f45bd5",
+      "txHash": "0x6b8c2af95872f744d3f0e749a0c3dcdc3b35ba774ffde1e9148f5a3c37c3c9b3",
       "layout": {
         "storage": [
           {
@@ -3354,7 +3354,7 @@
             "label": "ORACLE",
             "offset": 0,
             "slot": "203",
-            "type": "t_contract(IPriceOracle)20260",
+            "type": "t_contract(IPriceOracle)20259",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:167"
           },
@@ -3386,7 +3386,7 @@
             "label": "loanTerms",
             "offset": 0,
             "slot": "206",
-            "type": "t_struct(LoanTerms)18399_storage",
+            "type": "t_struct(LoanTerms)18398_storage",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:191"
           },
@@ -3394,7 +3394,7 @@
             "label": "accountOf",
             "offset": 0,
             "slot": "208",
-            "type": "t_mapping(t_address,t_struct(Account)18390_storage)",
+            "type": "t_mapping(t_address,t_struct(Account)18389_storage)",
             "contract": "NativeTokenMarket",
             "src": "contracts/NativeTokenMarket.sol:199"
           }
@@ -3420,15 +3420,15 @@
             "label": "contract IDinero",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriceOracle)20260": {
+          "t_contract(IPriceOracle)20259": {
             "label": "contract IPriceOracle",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(Account)18390_storage)": {
+          "t_mapping(t_address,t_struct(Account)18389_storage)": {
             "label": "mapping(address => struct NativeTokenMarket.Account)",
             "numberOfBytes": "32"
           },
-          "t_struct(Account)18390_storage": {
+          "t_struct(Account)18389_storage": {
             "label": "struct NativeTokenMarket.Account",
             "members": [
               {
@@ -3446,7 +3446,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(LoanTerms)18399_storage": {
+          "t_struct(LoanTerms)18398_storage": {
             "label": "struct NativeTokenMarket.LoanTerms",
             "members": [
               {

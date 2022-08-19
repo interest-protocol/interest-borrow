@@ -18,15 +18,14 @@ interface ILPFreeMarket {
 
     function totalRewardsPerToken() external view returns (uint256);
 
-    function userPrincipal(address account) external view returns (uint256);
-
-    function userAccount(address account)
+    function accountOf(address account)
         external
         view
         returns (
             uint128 collateral,
             uint128 rewards,
-            uint256 rewardDebt
+            uint256 rewardDebt,
+            uint256 principal
         );
 
     function collateralEarnings() external view returns (uint256);

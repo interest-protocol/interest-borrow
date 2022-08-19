@@ -24,7 +24,7 @@ interface IERC20Market {
             uint128 collateralEarned
         );
 
-    function userAccount(address account)
+    function accountOf(address account)
         external
         view
         returns (uint128 collateral, uint128 principal);
