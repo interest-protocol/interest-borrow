@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "@interest-protocol/dex/DataTypes.sol";
+import "@interest-protocol/dex/interfaces/IERC20.sol";
 import "@interest-protocol/tokens/interfaces/IDinero.sol";
 import "@interest-protocol/library/MathLib.sol";
 import "@interest-protocol/library/SafeCastLib.sol";
@@ -16,6 +17,9 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
+/**
+ * @dev This contract cannot be used with ERC20 tokens that do not have 18 decimals and we will avoid upgradeable ERC20 contracts.
+ */
 contract ERC20Market is
     Initializable,
     SafeTransferErrors,
@@ -147,6 +151,7 @@ contract ERC20Market is
 
     /// @notice Dinero address.
     IDinero internal DNR;
+
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
@@ -214,6 +219,7 @@ contract ERC20Market is
     /**
      * Requirements:
      * @notice It sets the initial data for the contract.
+     * @dev This contract requires the collateral to have 18 decimals to properly liquidate and check if a user is solvent.
      * @param contracts addresses of contracts to intialize this market
      * @param settings several global state uint variables to initialize this market
      *
@@ -230,6 +236,9 @@ contract ERC20Market is
 
         // Set the initial settings.
         _initializeSettings(settings);
+
+        // The collateral token must have 18 decimals for this contract to work properly.
+        assert(IERC20(COLLATERAL).decimals() == 18);
     }
 
     function _initializeContracts(bytes memory data) private {
