@@ -111,6 +111,36 @@ describe('ERC20Market', function () {
       expect(liquidationFee).to.be.equal(parseEther('0.1'));
       expect(terms.interestRate).to.be.equal(INTEREST_RATE);
     });
+    it('reverts if the collateral does not have 18 decimals', async () => {
+      const { dinero, priceOracle, treasury } = await loadFixture(
+        deployFixture
+      );
+
+      const smallToken = await deploy('SmallMintableERC20', ['Bitcoin', 'BTC']);
+
+      const contractData = defaultAbiCoder.encode(
+        ['address', 'address', 'address', 'address'],
+        [
+          dinero.address,
+          smallToken.address,
+          priceOracle.address,
+          treasury.address,
+        ]
+      );
+
+      const settingsData = defaultAbiCoder.encode(
+        ['uint128', 'uint96', 'uint128', 'uint64'],
+        [
+          parseEther('0.5'),
+          LIQUIDATION_FEE,
+          parseEther('1000000'),
+          INTEREST_RATE,
+        ]
+      );
+
+      await expect(deployUUPS('TestERC20Market', [contractData, settingsData]))
+        .to.rejected;
+    });
     it('reverts if you try to initialize it again', async () => {
       const { erc20Market } = await loadFixture(deployFixture);
       await expect(

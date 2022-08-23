@@ -17,6 +17,9 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
+/**
+ * @dev Interest Protocol Pairs have 18 decimals. The {_isSolvent} and {liquidate} function assume that the collateral token has 18 decimals (DNR has 18 decimals).
+ */
 contract LPFreeMarket is
     Initializable,
     SafeTransferErrors,

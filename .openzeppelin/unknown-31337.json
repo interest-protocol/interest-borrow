@@ -167,21 +167,6 @@
       "kind": "uups"
     },
     {
-      "address": "0x03E67e085e65B361c1A5cf17d8F1EcfEbAC1ccfB",
-      "txHash": "0x5dd7813481065fddb6c41c889ae7eb641fcfe09dfa60be0b9e0b5c1f104040f7",
-      "kind": "uups"
-    },
-    {
-      "address": "0x3D5a8E8348418a5051Dbe91863562A915E1C0FC0",
-      "txHash": "0xfd04900d596690358680102bab089aae5dc3a17926ecd372ccad123718b9ad04",
-      "kind": "uups"
-    },
-    {
-      "address": "0x9230Bfd38f0f4DD2F0cB3100Bf24Dddb4eDB2ef7",
-      "txHash": "0x264c35b899dc3bf5a55d8b19f37bfd006c88e446dc8da744697124fd108f8b6a",
-      "kind": "uups"
-    },
-    {
       "address": "0x93dc9AdeABcD0B36ce7F46B0e852E77B3Fd35bFE",
       "txHash": "0x66204350e621fa45696d0b0e4f82b7e5780dc0f87606d3acbdd66ce935078755",
       "kind": "uups"
@@ -219,6 +204,21 @@
     {
       "address": "0xA338f091891489A20e4E80E2a24FA58aC9BaF143",
       "txHash": "0x6ae8685b88ccdbeb0cd3b0e07d28f0a41bca50b7db4385e62cc525c4ea1161da",
+      "kind": "uups"
+    },
+    {
+      "address": "0x03E67e085e65B361c1A5cf17d8F1EcfEbAC1ccfB",
+      "txHash": "0x5dd7813481065fddb6c41c889ae7eb641fcfe09dfa60be0b9e0b5c1f104040f7",
+      "kind": "uups"
+    },
+    {
+      "address": "0x3D5a8E8348418a5051Dbe91863562A915E1C0FC0",
+      "txHash": "0xfd04900d596690358680102bab089aae5dc3a17926ecd372ccad123718b9ad04",
+      "kind": "uups"
+    },
+    {
+      "address": "0x9230Bfd38f0f4DD2F0cB3100Bf24Dddb4eDB2ef7",
+      "txHash": "0x9f5c2be42afd86454d81ab06a36d0eb8e9b7ca925a320f874cfe1f50691a4dbf",
       "kind": "uups"
     }
   ],
@@ -1605,263 +1605,6 @@
           "t_uint8": {
             "label": "uint8",
             "numberOfBytes": "1"
-          }
-        }
-      }
-    },
-    "621f3ab1ba984a937f4e1039a755097be228eebc37ff1ced3c8aff93aa828c88": {
-      "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
-      "txHash": "0x7aba24504c1f081cea99ed0b633aad57bb8ee1be951b857d3a25ad55cf083af0",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_uint8",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
-            "retypedFrom": "bool"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ERC1967UpgradeUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "UUPSUpgradeable",
-            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
-          },
-          {
-            "label": "DNR",
-            "offset": 0,
-            "slot": "201",
-            "type": "t_contract(IDinero)7671",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:149"
-          },
-          {
-            "label": "treasury",
-            "offset": 0,
-            "slot": "202",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:156"
-          },
-          {
-            "label": "COLLATERAL",
-            "offset": 0,
-            "slot": "203",
-            "type": "t_address",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:163"
-          },
-          {
-            "label": "liquidationFee",
-            "offset": 20,
-            "slot": "203",
-            "type": "t_uint96",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:166"
-          },
-          {
-            "label": "ORACLE",
-            "offset": 0,
-            "slot": "204",
-            "type": "t_contract(IPriceOracle)20144",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:173"
-          },
-          {
-            "label": "maxBorrowAmount",
-            "offset": 0,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:181"
-          },
-          {
-            "label": "maxLTVRatio",
-            "offset": 16,
-            "slot": "205",
-            "type": "t_uint128",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:184"
-          },
-          {
-            "label": "loan",
-            "offset": 0,
-            "slot": "206",
-            "type": "t_struct(Rebase)6973_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:191"
-          },
-          {
-            "label": "loanTerms",
-            "offset": 0,
-            "slot": "207",
-            "type": "t_struct(LoanTerms)15193_storage",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:198"
-          },
-          {
-            "label": "accountOf",
-            "offset": 0,
-            "slot": "209",
-            "type": "t_mapping(t_address,t_struct(Account)15184_storage)",
-            "contract": "ERC20Market",
-            "src": "contracts/ERC20Market.sol:206"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(IDinero)7671": {
-            "label": "contract IDinero",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IPriceOracle)20144": {
-            "label": "contract IPriceOracle",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_struct(Account)15184_storage)": {
-            "label": "mapping(address => struct ERC20Market.Account)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(Account)15184_storage": {
-            "label": "struct ERC20Market.Account",
-            "members": [
-              {
-                "label": "collateral",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "principal",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_struct(LoanTerms)15193_storage": {
-            "label": "struct ERC20Market.LoanTerms",
-            "members": [
-              {
-                "label": "lastAccrued",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "interestRate",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              },
-              {
-                "label": "dnrEarned",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "1"
-              },
-              {
-                "label": "collateralEarned",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "1"
-              }
-            ],
-            "numberOfBytes": "64"
-          },
-          "t_struct(Rebase)6973_storage": {
-            "label": "struct Rebase",
-            "members": [
-              {
-                "label": "elastic",
-                "type": "t_uint128",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "base",
-                "type": "t_uint128",
-                "offset": 16,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_uint128": {
-            "label": "uint128",
-            "numberOfBytes": "16"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          },
-          "t_uint8": {
-            "label": "uint8",
-            "numberOfBytes": "1"
-          },
-          "t_uint96": {
-            "label": "uint96",
-            "numberOfBytes": "12"
           }
         }
       }
@@ -3458,6 +3201,263 @@
           },
           "t_struct(LoanTerms)18397_storage": {
             "label": "struct NativeTokenMarket.LoanTerms",
+            "members": [
+              {
+                "label": "lastAccrued",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "interestRate",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              },
+              {
+                "label": "dnrEarned",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "collateralEarned",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Rebase)6973_storage": {
+            "label": "struct Rebase",
+            "members": [
+              {
+                "label": "elastic",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "base",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          },
+          "t_uint96": {
+            "label": "uint96",
+            "numberOfBytes": "12"
+          }
+        }
+      }
+    },
+    "d5bc1e0e8b6c31f5ba174963add5d768952a49706297cfb8a230f9f315684065": {
+      "address": "0xfEeEba86Eff29b9Ba49A6389876247ebFD465584",
+      "txHash": "0x213169597b59aa3300af4fb834cb315c9e41110e9afabc8264afc6949fabe3b4",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:211"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:107"
+          },
+          {
+            "label": "DNR",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IDinero)7671",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:153"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:161"
+          },
+          {
+            "label": "COLLATERAL",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_address",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:168"
+          },
+          {
+            "label": "liquidationFee",
+            "offset": 20,
+            "slot": "203",
+            "type": "t_uint96",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:171"
+          },
+          {
+            "label": "ORACLE",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IPriceOracle)20158",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:178"
+          },
+          {
+            "label": "maxBorrowAmount",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:186"
+          },
+          {
+            "label": "maxLTVRatio",
+            "offset": 16,
+            "slot": "205",
+            "type": "t_uint128",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:189"
+          },
+          {
+            "label": "loan",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_struct(Rebase)6973_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:196"
+          },
+          {
+            "label": "loanTerms",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_struct(LoanTerms)15195_storage",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:203"
+          },
+          {
+            "label": "accountOf",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_mapping(t_address,t_struct(Account)15186_storage)",
+            "contract": "ERC20Market",
+            "src": "contracts/ERC20Market.sol:211"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDinero)7671": {
+            "label": "contract IDinero",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPriceOracle)20158": {
+            "label": "contract IPriceOracle",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(Account)15186_storage)": {
+            "label": "mapping(address => struct ERC20Market.Account)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Account)15186_storage": {
+            "label": "struct ERC20Market.Account",
+            "members": [
+              {
+                "label": "collateral",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "principal",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(LoanTerms)15195_storage": {
+            "label": "struct ERC20Market.LoanTerms",
             "members": [
               {
                 "label": "lastAccrued",
