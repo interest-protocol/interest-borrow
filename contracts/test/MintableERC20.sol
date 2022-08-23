@@ -12,3 +12,16 @@ contract MintableERC20 is ERC20 {
         _mint(account, amount);
     }
 }
+
+contract SmallMintableERC20 is ERC20 {
+    //solhint-disable-next-line no-empty-blocks
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+
+    function mint(address account, uint256 amount) external {
+        _mint(account, amount);
+    }
+
+    function decimals() public pure override returns (uint8) {
+        return 8;
+    }
+}
