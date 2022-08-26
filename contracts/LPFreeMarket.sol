@@ -305,6 +305,8 @@ contract LPFreeMarket is
         view
         returns (uint256)
     {
+        if (totalCollateral == 0) return 0;
+
         uint256 totalPoolRewards = CASA_DE_PAPEL.getUserPendingRewards(
             0,
             address(this)

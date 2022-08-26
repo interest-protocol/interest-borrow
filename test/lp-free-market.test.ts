@@ -6,7 +6,7 @@ import {
 } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, network } from 'hardhat';
 
 import {
   CasaDePapel,
@@ -243,6 +243,47 @@ describe('LP Free Market', function () {
           ethers.constants.HashZero
         )
       ).to.revertedWith('Initializable: contract is already initialized');
+    });
+  });
+
+  describe('function: getPendingRewards(address)', function () {
+    it('returns 0 if there is no collateral', async () => {
+      const { alice, lpFreeMarket } = await loadFixture(deployFixture);
+
+      expect(await lpFreeMarket.getPendingRewards(alice.address)).to.be.equal(
+        0
+      );
+    });
+    it('amount of rewards a user has', async () => {
+      const { alice, lpFreeMarket, casaDePapel } = await loadFixture(
+        deployFixture
+      );
+      await network.provider.send('evm_setAutomine', [false]);
+      await lpFreeMarket.connect(alice).deposit(alice.address, parseEther('2'));
+
+      await mine(1);
+
+      await lpFreeMarket.compound();
+
+      await mine(4);
+
+      const [totalRewardsPerToken, ipxPoolRewards, farmPoolRewards] =
+        await Promise.all([
+          lpFreeMarket.totalRewardsPerToken(),
+          casaDePapel.getUserPendingRewards(0, lpFreeMarket.address),
+          casaDePapel.getUserPendingRewards(1, lpFreeMarket.address),
+        ]);
+
+      expect(await lpFreeMarket.getPendingRewards(alice.address)).to.be.equal(
+        totalRewardsPerToken
+          .mul(parseEther('2'))
+          .div(parseEther('1'))
+          .add(ipxPoolRewards)
+          .add(farmPoolRewards)
+          .sub(1) // rounding
+      );
+
+      await network.provider.send('evm_setAutomine', [true]);
     });
   });
 
