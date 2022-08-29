@@ -27,6 +27,9 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // Token Address -> Chainlink feed with USD base.
     mapping(address => AggregatorV3Interface) public getUSDFeed;
 
+    // Store the decimals of ERC20 tokens
+    mapping(address => uint256) internal _getDecimals;
+
     /*///////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -92,30 +95,39 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         ) = pair.metadata();
 
-        AggregatorV3Interface token0Feed = getUSDFeed[token0];
-        AggregatorV3Interface token1Feed = getUSDFeed[token1];
+        uint256 price0;
+        uint256 price1;
 
-        if (address(0) == address(token0Feed))
-            revert PriceOracle__MissingFeed();
+        // Uniswap style block scope to prevent reaching the stack size limit
+        {
+            AggregatorV3Interface token0Feed = getUSDFeed[token0];
+            AggregatorV3Interface token1Feed = getUSDFeed[token1];
 
-        if (address(0) == address(token1Feed))
-            revert PriceOracle__MissingFeed();
+            if (address(0) == address(token0Feed))
+                revert PriceOracle__MissingFeed();
 
-        (, int256 answer0, , , ) = token0Feed.latestRoundData();
-        (, int256 answer1, , , ) = token1Feed.latestRoundData();
+            if (address(0) == address(token1Feed))
+                revert PriceOracle__MissingFeed();
 
-        uint256 price0 = _toUint256(answer0).adjust(token0Feed.decimals());
-        uint256 price1 = _toUint256(answer1).adjust(token1Feed.decimals());
+            (, int256 answer0, , , ) = token0Feed.latestRoundData();
+            (, int256 answer1, , , ) = token1Feed.latestRoundData();
+
+            price0 = _toUint256(answer0).adjust(token0Feed.decimals());
+            price1 = _toUint256(answer1).adjust(token1Feed.decimals());
+        }
 
         /// @dev If total supply is zero it should throw and revert
         // Get square root of K divided by the total supply * 2
-        // This value is encoded toa uint224 to improve the accuracy
-        uint256 doubleSqrtK = (reserve0 * reserve1).sqrt().mulDiv(
-            2**112,
-            pair.totalSupply()
-        ) * 2;
+        // This value is multiplied by 2**112 to improve the accuracy
+        // We also need to adjust the reserves to 18 decimals to handle odd tokens with non 18 decimals
+        uint256 doubleSqrtK = (reserve0.adjust(uint8(_getDecimals[token0])) *
+            reserve1.adjust(uint8(_getDecimals[token1]))).sqrt().mulDiv(
+                2**112,
+                pair.totalSupply()
+            ) * 2;
 
         // Get fair price of LP token in USD by re-engineering the K formula.
+        // We need to divide by 2**56 twice to remove the extra decimals and get a number with 18 decimals.
         price = doubleSqrtK
             .mulDiv(price0.sqrt(), 2**56)
             .mulDiv(price1.sqrt(), 2**56)
@@ -200,6 +212,7 @@ contract PriceOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         external
         onlyOwner
     {
+        _getDecimals[asset] = IERC20MetadataUpgradeable(asset).decimals();
         getUSDFeed[asset] = feed;
         emit NewFeed(asset, address(feed));
     }
