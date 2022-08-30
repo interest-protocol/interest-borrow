@@ -341,7 +341,7 @@ contract LPFreeMarket is
         if (earnings == 0) return;
 
         // Reset to 0
-        collateralEarnings = 0;
+        delete collateralEarnings;
 
         COLLATERAL.safeTransfer(treasury, earnings);
 

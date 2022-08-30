@@ -287,7 +287,7 @@ contract NativeTokenMarket is
         if (earnings == 0) return;
 
         // Reset to 0
-        loanTerms.dnrEarned = 0;
+        delete loanTerms.dnrEarned;
 
         // This can be minted. Because once users get liquidated or repay the loans. This amount will be burned (fees).
         // So it will keep the peg to USD. There must be always at bare minimum 1 USD in collateral to 1 Dinero in existence.
@@ -305,7 +305,7 @@ contract NativeTokenMarket is
         if (earnings == 0) return;
 
         // Reset to 0
-        loanTerms.collateralEarned = 0;
+        delete loanTerms.collateralEarned;
 
         treasury.safeTransferNativeToken(earnings);
 
