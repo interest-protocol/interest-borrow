@@ -158,6 +158,215 @@ describe('ERC20Market', function () {
     });
   });
 
+  describe('collateral with non-standard decimals', function () {
+    it('properly checks for solvency', async () => {
+      const { priceOracle, treasury, dinero, alice } = await loadFixture(
+        deployFixture
+      );
+
+      const smallBTC: MintableERC20 = await deploy('SmallMintableERC20', [
+        'Bitcoin',
+        'BTC',
+      ]);
+
+      await priceOracle.setUSDFeed(smallBTC.address, BTC_USD_PRICE_FEED);
+
+      const contractData = defaultAbiCoder.encode(
+        ['address', 'address', 'address', 'address'],
+        [
+          dinero.address,
+          smallBTC.address,
+          priceOracle.address,
+          treasury.address,
+        ]
+      );
+
+      const settingsData = defaultAbiCoder.encode(
+        ['uint128', 'uint96', 'uint128', 'uint64'],
+        [
+          parseEther('0.5'),
+          LIQUIDATION_FEE,
+          parseEther('1000000'),
+          INTEREST_RATE,
+        ]
+      );
+
+      const erc20Market: TestERC20Market = await deployUUPS('TestERC20Market', [
+        contractData,
+        settingsData,
+      ]);
+
+      await Promise.all([
+        smallBTC.mint(alice.address, ethers.BigNumber.from(10).pow(8).mul(5)),
+        smallBTC
+          .connect(alice)
+          .approve(erc20Market.address, ethers.constants.MaxUint256),
+        dinero.grantRole(MINTER_ROLE, erc20Market.address),
+      ]);
+
+      await erc20Market
+        .connect(alice)
+        .deposit(alice.address, ethers.BigNumber.from(10).pow(8).mul(2)); // deposit 2 BTC
+
+      await expect(
+        erc20Market.connect(alice).borrow(alice.address, BTC_USD_PRICE)
+      ).not.rejected;
+    });
+
+    it('liquidates correctly', async () => {
+      const { treasury, alice, owner, bob, jose, dinero, priceOracle } =
+        await loadFixture(deployFixture);
+
+      const smallBTC: MintableERC20 = await deploy('SmallMintableERC20', [
+        'Bitcoin',
+        'BTC',
+      ]);
+
+      await priceOracle.setUSDFeed(smallBTC.address, BTC_USD_PRICE_FEED);
+
+      const contractData = defaultAbiCoder.encode(
+        ['address', 'address', 'address', 'address'],
+        [
+          dinero.address,
+          smallBTC.address,
+          priceOracle.address,
+          treasury.address,
+        ]
+      );
+
+      const settingsData = defaultAbiCoder.encode(
+        ['uint128', 'uint96', 'uint128', 'uint64'],
+        [
+          parseEther('0.5'),
+          LIQUIDATION_FEE,
+          parseEther('1000000'),
+          INTEREST_RATE,
+        ]
+      );
+
+      const erc20Market: TestERC20Market = await deployUUPS('TestERC20Market', [
+        contractData,
+        settingsData,
+      ]);
+
+      await Promise.all([
+        smallBTC.mint(alice.address, ethers.BigNumber.from(10).pow(8).mul(10)),
+        smallBTC
+          .connect(alice)
+          .approve(erc20Market.address, ethers.constants.MaxUint256),
+        dinero.grantRole(MINTER_ROLE, erc20Market.address),
+      ]);
+
+      const priceFeed: PriceFeed = await deploy('PriceFeed');
+
+      await priceFeed.setPrice(
+        BTC_USD_PRICE.div(BigNumber.from(10).pow(10)).div(2)
+      );
+
+      await Promise.all([
+        smallBTC.mint(bob.address, ethers.BigNumber.from(10).pow(8).mul(10)),
+        smallBTC.mint(jose.address, ethers.BigNumber.from(10).pow(8).mul(10)),
+        smallBTC
+          .connect(bob)
+          .approve(erc20Market.address, ethers.constants.MaxUint256),
+        smallBTC
+          .connect(jose)
+          .approve(erc20Market.address, ethers.constants.MaxUint256),
+      ]);
+
+      await Promise.all([
+        erc20Market
+          .connect(alice)
+          .request(
+            [DEPOSIT_REQUEST, BORROW_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, ethers.BigNumber.from(10).pow(8).mul(10)]
+              ),
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [alice.address, parseEther('170000')]
+              ),
+            ]
+          ),
+        erc20Market
+          .connect(bob)
+          .request(
+            [DEPOSIT_REQUEST, BORROW_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [bob.address, ethers.BigNumber.from(10).pow(8).mul(10)]
+              ),
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [bob.address, parseEther('50000')]
+              ),
+            ]
+          ),
+        erc20Market
+          .connect(jose)
+          .request(
+            [DEPOSIT_REQUEST, BORROW_REQUEST],
+            [
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [jose.address, ethers.BigNumber.from(10).pow(8).mul(7)]
+              ),
+              defaultAbiCoder.encode(
+                ['address', 'uint256'],
+                [jose.address, parseEther('120000')]
+              ),
+            ]
+          ),
+      ]);
+
+      const swap: Swap = await deploy('Swap', []);
+
+      await time.increase(ONE_MONTH_IN_SECONDS);
+
+      await priceOracle.setUSDFeed(smallBTC.address, priceFeed.address);
+
+      await expect(
+        erc20Market.liquidate(
+          [alice.address, bob.address, jose.address],
+          [
+            ethers.constants.MaxUint256,
+            ethers.constants.MaxUint256,
+            parseEther('100000'),
+          ],
+          swap.address,
+          ethers.constants.HashZero
+        )
+      )
+        .to.emit(erc20Market, 'Liquidate')
+        .withArgs(
+          owner.address,
+          alice.address,
+          parseEther('170000'),
+          anyUint,
+          anyUint,
+          anyUint
+        )
+        .to.emit(erc20Market, 'Liquidate')
+        .withArgs(
+          owner.address,
+          jose.address,
+          parseEther('100000'),
+          anyUint,
+          anyUint,
+          anyUint
+        )
+        .to.emit(erc20Market, 'Accrue')
+        .to.emit(dinero, 'Transfer')
+        .withArgs(owner.address, ethers.constants.AddressZero, anyUint)
+        .to.emit(smallBTC, 'Transfer')
+        .withArgs(erc20Market.address, swap.address, anyUint)
+        .to.emit(swap, 'SellOneToken');
+    });
+  });
+
   describe('function: getCollateralEarnings', function () {
     it('does not send any collateral if there are no earnings', async () => {
       const { erc20Market, btc } = await loadFixture(deployFixture);

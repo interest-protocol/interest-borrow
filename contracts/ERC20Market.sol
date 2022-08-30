@@ -17,6 +17,8 @@ import "@interest-protocol/library/SafeTransferLib.sol";
 import "./interfaces/IPriceOracle.sol";
 import "./interfaces/ISwap.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @dev This contract cannot be used with ERC20 tokens that do not have 18 decimals and we will avoid upgradeable ERC20 contracts.
  */
