@@ -152,6 +152,7 @@ contract ERC20Market is
     /// @notice Dinero address.
     IDinero internal DNR;
 
+    uint96 internal COLLATERAL_DECIMALS_FACTOR;
     //////////////////////////////////////////////////////////////
 
     /*//////////////////////////////////////////////////////////////
@@ -237,8 +238,8 @@ contract ERC20Market is
         // Set the initial settings.
         _initializeSettings(settings);
 
-        // The collateral token must have 18 decimals for this contract to work properly.
-        assert(IERC20(COLLATERAL).decimals() == 18);
+        COLLATERAL_DECIMALS_FACTOR = (10**IERC20(COLLATERAL).decimals())
+            .toUint96();
     }
 
     function _initializeContracts(bytes memory data) private {
@@ -291,7 +292,7 @@ contract ERC20Market is
         if (earnings == 0) return;
 
         // Consider the fees collected.
-        loanTerms.dnrEarned = 0;
+        delete loanTerms.dnrEarned;
 
         // This can be minted. Because once users repay the loans. This amount will be burned (fees).
         // So it will keep the peg to USD. There must be always at bare minimum 1 USD in collateral to 1 Dinero in existence.
@@ -309,7 +310,7 @@ contract ERC20Market is
         if (earnings == 0) return;
 
         // Reset to 0
-        loanTerms.collateralEarned = 0;
+        delete loanTerms.collateralEarned;
 
         COLLATERAL.safeTransfer(treasury, earnings);
 
@@ -440,7 +441,14 @@ contract ERC20Market is
 
             // How much collateral is needed to cover the loan.
             // Since Dinero is always USD we can calculate this way.
-            uint256 collateralToCover = debt.fdiv(_exchangeRate);
+            // DNR has 18 decimals, which is why we can divide by 1 ether.
+
+            uint256 collateralToCover = COLLATERAL_DECIMALS_FACTOR == 1 ether
+                ? debt.fdiv(_exchangeRate)
+                : debt.fdiv(_exchangeRate).mulDiv(
+                    COLLATERAL_DECIMALS_FACTOR,
+                    1 ether
+                );
 
             // Calculate the collateralFee (for the liquidator and the protocol)
             uint256 fee = collateralToCover.fmul(liquidationFee);
@@ -626,10 +634,18 @@ contract ERC20Market is
         // Account has no collateral but has open loans, he is insolvent.
         if (account.collateral == 0) return false;
 
+        // We need to make sure the collateral asset has the same decimals as Dinero to compare them on the next operation.
+        uint256 collateral = COLLATERAL_DECIMALS_FACTOR == 1 ether
+            ? account.collateral
+            : uint256(account.collateral).mulDiv(
+                1 ether,
+                COLLATERAL_DECIMALS_FACTOR
+            );
+
         // All Loans are emitted in `DINERO` which is based on USD price
         // Collateral in USD * {maxLTVRatio} has to be greater than principal + interest rate accrued in DINERO which is pegged to USD
         return
-            uint256(account.collateral).fmul(exchangeRate).fmul(maxLTVRatio) >=
+            collateral.fmul(exchangeRate).fmul(maxLTVRatio) >=
             loan.toElastic(account.principal, true);
     }
 
