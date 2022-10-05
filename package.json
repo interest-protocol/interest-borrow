@@ -45,10 +45,10 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.4.2",
-    "@interest-protocol/dex": "^1.3.3",
-    "@interest-protocol/earn": "^1.4.1",
+    "@interest-protocol/dex": "^1.4.0",
+    "@interest-protocol/earn": "^1.5.0",
     "@interest-protocol/library": "^1.2.2",
-    "@interest-protocol/tokens": "^1.2.0",
+    "@interest-protocol/tokens": "^1.3.0",
     "@openzeppelin/contracts-upgradeable": "^4.7.1"
   }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -14,8 +14,8 @@ import "@interest-protocol/library/SafeCastLib.sol";
 import "@interest-protocol/library/SafeTransferErrors.sol";
 import "@interest-protocol/library/SafeTransferLib.sol";
 
-import "./interfaces/IPriceOracle.sol";
-import "./interfaces/ISwap.sol";
+import "../interfaces/IPriceOracle.sol";
+import "../interfaces/ISwap.sol";
 
 /**
  * @dev Interest Protocol Pairs have 18 decimals. The {_isSolvent} and {liquidate} function assume that the collateral token has 18 decimals (DNR has 18 decimals).
