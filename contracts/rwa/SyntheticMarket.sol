@@ -55,8 +55,7 @@ contract SyntheticMarket is
         address indexed liquidator,
         address indexed debtor,
         uint256 rwa,
-        uint256 collateral,
-        uint256 fee
+        uint256 collateral
     );
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -285,19 +284,20 @@ contract SyntheticMarket is
 
             uint256 collateralToCover = amountToLiquidate.fmul(exchangeRate);
 
-            // Calculate the collateralFee (for the liquidator and the protocol)
-            uint256 fee = collateralToCover.fmul(liquidationFee);
+            unchecked {
+                // Calculate the collateralFee (for the liquidator and the protocol)
+                collateralToCover += collateralToCover.fmul(liquidationFee);
+            }
 
             // Remove the collateral from the account. We can consider the debt paid.
             // The rewards accrued will be sent to the liquidated `account`.
-            _withdraw(account, account, collateralToCover + fee);
+            _withdraw(account, account, collateralToCover);
 
             emit Liquidate(
                 msg.sender,
                 account,
                 amountToLiquidate,
-                collateralToCover,
-                fee
+                collateralToCover
             );
 
             liquidationInfo.allCollateral += collateralToCover;

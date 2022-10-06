@@ -38,6 +38,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-promise": "^6.0.0",
     "eslint-plugin-simple-import-sort": "^7.0.0",
+    "ethereumjs-util": "^7.1.5",
     "hardhat": "^2.10.1",
     "husky": "^7.0.0",
     "prettier": "^2.7.1",

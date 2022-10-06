@@ -1,6 +1,8 @@
 import { ContractAddressOrInstance } from '@openzeppelin/hardhat-upgrades/dist/utils';
+import { ecsign } from 'ethereumjs-util';
 import { BigNumber } from 'ethers';
 import { ethers, upgrades } from 'hardhat';
+
 export const multiDeploy = async (
   x: ReadonlyArray<string>,
   y: Array<Array<unknown> | undefined> = []
@@ -90,6 +92,76 @@ export function sqrt(value: BigNumber) {
   return y;
 }
 
+export const getPairDomainSeparator = (
+  pairAddress: string,
+  pairName: string,
+  chainId: number
+) =>
+  ethers.utils.solidityKeccak256(
+    ['bytes'],
+    [
+      ethers.utils.defaultAbiCoder.encode(
+        ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+        [
+          ethers.utils.solidityKeccak256(
+            ['bytes'],
+            [
+              ethers.utils.toUtf8Bytes(
+                'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'
+              ),
+            ]
+          ),
+          ethers.utils.solidityKeccak256(
+            ['bytes'],
+            [ethers.utils.toUtf8Bytes(pairName)]
+          ),
+          ethers.utils.solidityKeccak256(
+            ['bytes'],
+            [ethers.utils.toUtf8Bytes('1')]
+          ),
+          chainId,
+          pairAddress,
+        ]
+      ),
+    ]
+  );
+
+export const getPairDigest = (
+  domainSeparator: string,
+  owner: string,
+  spender: string,
+  value: BigNumber,
+  nonce: number,
+  deadline: number
+) =>
+  ethers.utils.keccak256(
+    ethers.utils.solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      [
+        '0x19',
+        '0x01',
+        domainSeparator,
+        ethers.utils.keccak256(
+          ethers.utils.defaultAbiCoder.encode(
+            ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
+            [
+              ethers.utils.keccak256(
+                ethers.utils.toUtf8Bytes(
+                  'Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'
+                )
+              ),
+              owner,
+              spender,
+              value.toString(),
+              nonce,
+              deadline,
+            ]
+          )
+        ),
+      ]
+    )
+  );
+
 export const MINTER_ROLE = ethers.utils.solidityKeccak256(
   ['string'],
   ['MINTER_ROLE']
@@ -110,3 +182,16 @@ export const REPAY_REQUEST = 3;
 
 export const WRAPPED_NATIVE_TOKEN =
   '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
+
+// @desc follow the same order of the signers accounts
+export const PRIVATE_KEYS = [
+  '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+  '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+  '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+];
+
+export const getECSign = (privateKey: string, digest: string) =>
+  ecsign(
+    Buffer.from(digest.slice(2), 'hex'),
+    Buffer.from(privateKey.replace('0x', ''), 'hex')
+  );

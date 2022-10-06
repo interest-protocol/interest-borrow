@@ -32,7 +32,7 @@ contract ERC20Fees {
 
     error ERC20Fees__DeadlineExpired();
 
-    error ERC20Fees__InvalidSigner();
+    error ERC20Fees__InvalidSignature();
 
     error ERC20Fees__Unauthorized();
 
@@ -185,7 +185,7 @@ contract ERC20Fees {
             );
 
             if (recoveredAddress == address(0) || recoveredAddress != owner)
-                revert ERC20Fees__InvalidSigner();
+                revert ERC20Fees__InvalidSignature();
 
             allowance[recoveredAddress][spender] = value;
         }
@@ -258,7 +258,7 @@ contract ERC20Fees {
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       Fees Logic                           */
+    /*                       Fee Logic                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     function claimFees() external onlyDeployer returns (uint256 amount) {
