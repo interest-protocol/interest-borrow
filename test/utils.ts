@@ -75,6 +75,8 @@ export const BNB_USD_PRICE = ethers.BigNumber.from('417349361890000000000');
 
 export const BTC_USD_PRICE = ethers.BigNumber.from('41629290000000000000000');
 
+export const BRL_USD_PRICE = ethers.BigNumber.from('192496600000000000');
+
 export const ETHER_USD_PRICE_FEED =
   '0x9ef1b8c0e4f7dc8bf5719ea496883dc6401d5b2e';
 

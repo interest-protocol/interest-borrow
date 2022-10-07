@@ -1,6 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
 import { ethers, network } from 'hardhat';
 
 import { ERC20Fees } from '../typechain-types';

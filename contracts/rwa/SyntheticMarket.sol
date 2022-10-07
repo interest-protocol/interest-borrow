@@ -37,14 +37,20 @@ contract SyntheticMarket is
 
     event MaxLTVRatioUpdated(uint256 oldFee, uint256 newFee);
 
-    event Deposit(
+    event Deposit(address indexed from, address indexed to, uint256 amount);
+
+    event Withdraw(address indexed from, address indexed to, uint256 amount);
+
+    event GetRewards(address indexed to, uint256 amount);
+
+    event Mint(
         address indexed from,
         address indexed to,
         uint256 amount,
         uint256 rewards
     );
 
-    event Withdraw(
+    event Burn(
         address indexed from,
         address indexed to,
         uint256 amount,
@@ -103,7 +109,7 @@ contract SyntheticMarket is
     /*                       Slot 0                               */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    ERC20Fees private RWA;
+    ERC20Fees public RWA;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Slot 1                               */
@@ -125,7 +131,7 @@ contract SyntheticMarket is
 
     uint128 public maxLTVRatio;
 
-    uint128 public totalCollateral;
+    uint128 public totalRWA;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Slot 4                               */
@@ -174,7 +180,7 @@ contract SyntheticMarket is
         if (
             !_isSolvent(
                 msg.sender,
-                ORACLE.getTokenUSDPrice(address(COLLATERAL), 1 ether)
+                ORACLE.getTokenUSDPrice(address(RWA), 1 ether)
             )
         ) revert SyntheticMarket__InsolventCaller();
     }
@@ -188,17 +194,16 @@ contract SyntheticMarket is
         view
         returns (uint256)
     {
-        if (totalCollateral == 0) return 0;
+        if (totalRWA == 0) return 0;
 
-        uint256 pendingRewardsPerToken = RWA.deployerBalance().fdiv(
-            totalCollateral
-        ) + totalRewardsPerToken;
+        uint256 pendingRewardsPerToken = RWA
+            .deployerBalance()
+            .fmul(0.8e18)
+            .fdiv(totalRWA) + totalRewardsPerToken;
 
         Account memory user = accountOf[account];
 
-        return
-            uint256(user.collateral).fmul(pendingRewardsPerToken) -
-            user.rewardDebt;
+        return uint256(user.RWA).fmul(pendingRewardsPerToken) - user.rewardDebt;
     }
 
     function deposit(address to, uint256 amount) external {
@@ -206,14 +211,11 @@ contract SyntheticMarket is
     }
 
     function withdraw(address to, uint256 amount) external isSolvent {
-        emit Withdraw(
-            msg.sender,
-            to,
-            amount,
-            _withdraw(msg.sender, to, amount)
-        );
+        _withdraw(msg.sender, amount);
 
         COLLATERAL.safeTransfer(to, amount);
+
+        emit Withdraw(msg.sender, to, amount);
     }
 
     function mint(address to, uint256 amount) external isSolvent {
@@ -222,6 +224,31 @@ contract SyntheticMarket is
 
     function burn(address account, uint256 amount) external {
         _burn(account, amount);
+    }
+
+    function getRewards() external {
+        // Save storage state in memory to save gas.
+        Account memory user = accountOf[msg.sender];
+
+        if (user.RWA == 0) return;
+
+        // Save storage state in memory to save gas.
+        uint256 _totalRewardsPerToken = totalRewardsPerToken;
+
+        _totalRewardsPerToken += RWA.claimFees().fdiv(totalRWA);
+
+        uint256 rewards = _totalRewardsPerToken.fmul(user.RWA) -
+            user.rewardDebt;
+
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+
+        // Update Global state
+        accountOf[msg.sender] = user;
+        totalRewardsPerToken = _totalRewardsPerToken;
+
+        if (rewards != 0) _safeTransferRWA(msg.sender, rewards);
+
+        emit GetRewards(msg.sender, rewards);
     }
 
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
@@ -262,6 +289,12 @@ contract SyntheticMarket is
 
         LiquidationInfo memory liquidationInfo;
 
+        uint256 _totalRewardsPerToken = totalRewardsPerToken;
+
+        _totalRewardsPerToken += RWA.claimFees().fdiv(totalRWA);
+
+        totalRewardsPerToken = _totalRewardsPerToken;
+
         // Loop through all positions
         for (uint256 i; i < accounts.length; i = i.uAdd(1)) {
             address account = accounts[i];
@@ -269,17 +302,19 @@ contract SyntheticMarket is
             // If the user has enough collateral to cover his debt. He cannot be liquidated. Move to the next one.
             if (_isSolvent(account, exchangeRate)) continue;
 
-            // How much principal the user has borrowed.
-            uint256 rwa = accountOf[account].RWA;
+            Account memory user = accountOf[account];
 
             // Liquidator cannot repay more than the what `account` borrowed.
             // Note the liquidator does not need to close the full position.
-            uint256 amountToLiquidate = RWAs[i].min(rwa);
+            uint256 amountToLiquidate = RWAs[i].min(user.RWA);
+
+            uint256 rewards = (_totalRewardsPerToken.fmul(user.RWA) -
+                user.rewardDebt).toUint128();
 
             unchecked {
                 // The minimum value is it's own value. So this can never underflow.
                 // Update the userLoan global state
-                accountOf[account].RWA -= amountToLiquidate.toUint128();
+                user.RWA -= amountToLiquidate.toUint128();
             }
 
             uint256 collateralToCover = amountToLiquidate.fmul(exchangeRate);
@@ -289,9 +324,16 @@ contract SyntheticMarket is
                 collateralToCover += collateralToCover.fmul(liquidationFee);
             }
 
-            // Remove the collateral from the account. We can consider the debt paid.
-            // The rewards accrued will be sent to the liquidated `account`.
-            _withdraw(account, account, collateralToCover);
+            user.collateral -= collateralToCover.toUint128();
+            user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+
+            // Update Global state
+            accountOf[account] = user;
+
+            liquidationInfo.allCollateral += collateralToCover;
+            liquidationInfo.allRWA += amountToLiquidate;
+
+            if (rewards != 0) _safeTransferRWA(account, rewards);
 
             emit Liquidate(
                 msg.sender,
@@ -299,13 +341,12 @@ contract SyntheticMarket is
                 amountToLiquidate,
                 collateralToCover
             );
-
-            liquidationInfo.allCollateral += collateralToCover;
-            liquidationInfo.allRWA += amountToLiquidate;
         }
 
         if (liquidationInfo.allRWA == 0)
             revert SyntheticMarket__InvalidLiquidationAmount();
+
+        totalRWA -= liquidationInfo.allRWA.toUint128();
 
         COLLATERAL.safeTransfer(recipient, liquidationInfo.allCollateral);
 
@@ -329,88 +370,94 @@ contract SyntheticMarket is
         // Save storage state in memory to save gas.
         Account memory user = accountOf[to];
 
-        uint256 _totalCollateral = totalCollateral;
-        uint256 _totalRewardsPerToken = totalRewardsPerToken;
-
-        if (_totalCollateral != 0)
-            _totalRewardsPerToken += RWA.claimFees().fdiv(_totalCollateral);
-
-        uint256 rewards;
-
-        unchecked {
-            // We do not need to calculate rewards if the user has no open deposits in this contract.
-            if (user.collateral != 0) {
-                // Calculate and add how many rewards the user accrued.
-                rewards += (_totalRewardsPerToken.fmul(user.collateral) -
-                    user.rewardDebt).toUint128();
-            }
-        }
-
         COLLATERAL.safeTransferFrom(msg.sender, address(this), amount);
-
-        // Update local State
-        _totalCollateral += amount;
 
         unchecked {
             user.collateral += amount.toUint128();
         }
 
-        // Update State to tell us that user has been completed paid up to this point.
-        user.rewardDebt = _totalRewardsPerToken.fmul(user.collateral);
-
         // Update Global state
         accountOf[to] = user;
-        totalCollateral = _totalCollateral.toUint128();
-        totalRewardsPerToken = _totalRewardsPerToken;
 
-        if (rewards != 0) _safeTransferRWA(to, rewards);
-
-        emit Deposit(msg.sender, to, amount, rewards);
+        emit Deposit(msg.sender, to, amount);
     }
 
-    function _withdraw(
-        address from,
-        address rewardsRecipient,
-        uint256 amount
-    ) internal returns (uint256 rewards) {
-        // Save storage state in memory to save gas.
-        Account memory user = accountOf[from];
-
-        // Save storage state in memory to save gas.
-        uint256 _totalCollateral = totalCollateral;
-        uint256 _totalRewardsPerToken = totalRewardsPerToken;
-
-        _totalRewardsPerToken += RWA.claimFees().fdiv(_totalCollateral); // Collect the current rewards in the {IPX} pool to properly update {_totalRewardsPerAmount}.
-
-        // Calculate how many rewards the user is entitled before this deposit
-        rewards = _totalRewardsPerToken.fmul(user.collateral) - user.rewardDebt;
-
-        user.collateral -= amount.toUint128();
-
-        unchecked {
-            _totalCollateral -= amount;
-        }
-
-        user.rewardDebt = _totalRewardsPerToken.fmul(user.collateral);
-
-        // Update Global state
-        accountOf[from] = user;
-        totalCollateral = _totalCollateral.toUint128();
-        totalRewardsPerToken = _totalRewardsPerToken;
-
-        if (rewards != 0) _safeTransferRWA(rewardsRecipient, rewards);
+    function _withdraw(address from, uint256 amount) internal {
+        accountOf[from].collateral -= amount.toUint128();
     }
 
     function _mint(address to, uint256 amount) internal {
-        accountOf[msg.sender].RWA += amount.toUint128();
+        // Save storage state in memory to save gas.
+        Account memory user = accountOf[msg.sender];
+
+        uint256 _totalRWA = totalRWA;
+        uint256 _totalRewardsPerToken = totalRewardsPerToken;
+
+        uint256 rewards;
+
+        if (user.RWA != 0) {
+            _totalRewardsPerToken += RWA.claimFees().fdiv(_totalRWA);
+
+            unchecked {
+                // Calculate and add how many rewards the user accrued.
+                rewards += (_totalRewardsPerToken.fmul(user.RWA) -
+                    user.rewardDebt).toUint128();
+            }
+        }
+
+        // Update local State
+        user.RWA += amount.toUint128();
+
+        unchecked {
+            _totalRWA += amount;
+        }
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+
+        // Update Global state
+        accountOf[msg.sender] = user;
+        totalRWA = _totalRWA.toUint128();
+        totalRewardsPerToken = _totalRewardsPerToken;
 
         RWA.mint(to, amount);
+        if (rewards != 0) _safeTransferRWA(to, rewards);
     }
 
     function _burn(address account, uint256 amount) internal {
+        // Save storage state in memory to save gas.
+        Account memory user = accountOf[account];
+
+        uint256 _totalRWA = totalRWA;
+        uint256 _totalRewardsPerToken = totalRewardsPerToken;
+
+        _totalRewardsPerToken += RWA.claimFees().fdiv(_totalRWA);
+
+        uint256 rewards;
+
+        unchecked {
+            // We do not need to calculate rewards if the user has no open deposits in this contract.
+
+            // Calculate and add how many rewards the user accrued.
+            rewards += (_totalRewardsPerToken.fmul(user.RWA) - user.rewardDebt)
+                .toUint128();
+        }
+
+        // We want to burn before updating the state
         RWA.burn(msg.sender, amount);
 
-        accountOf[account].RWA -= amount.toUint128();
+        user.RWA -= amount.toUint128();
+
+        unchecked {
+            _totalRWA -= amount;
+        }
+
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+
+        // Update Global state
+        accountOf[account] = user;
+        totalRWA = _totalRWA.toUint128();
+        totalRewardsPerToken = _totalRewardsPerToken;
+
+        if (rewards != 0) _safeTransferRWA(account, rewards);
     }
 
     function _safeTransferRWA(address to, uint256 amount) internal {
@@ -452,14 +499,12 @@ contract SyntheticMarket is
 
         if (requestAction == WITHDRAW_REQUEST) {
             (address to, uint256 amount) = abi.decode(data, (address, uint256));
-            emit Withdraw(
-                msg.sender,
-                to,
-                amount,
-                _withdraw(msg.sender, to, amount)
-            );
+            _withdraw(msg.sender, amount);
 
             COLLATERAL.safeTransfer(to, amount);
+
+            emit Withdraw(msg.sender, to, amount);
+
             return;
         }
 
