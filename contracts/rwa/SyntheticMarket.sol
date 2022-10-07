@@ -194,14 +194,13 @@ contract SyntheticMarket is
         view
         returns (uint256)
     {
-        if (totalRWA == 0) return 0;
+        Account memory user = accountOf[account];
+        if (user.RWA == 0) return 0;
 
         uint256 pendingRewardsPerToken = RWA
             .deployerBalance()
             .fmul(0.8e18)
             .fdiv(totalRWA) + totalRewardsPerToken;
-
-        Account memory user = accountOf[account];
 
         return uint256(user.RWA).fmul(pendingRewardsPerToken) - user.rewardDebt;
     }
@@ -211,11 +210,7 @@ contract SyntheticMarket is
     }
 
     function withdraw(address to, uint256 amount) external isSolvent {
-        _withdraw(msg.sender, amount);
-
-        COLLATERAL.safeTransfer(to, amount);
-
-        emit Withdraw(msg.sender, to, amount);
+        _withdraw(to, amount);
     }
 
     function mint(address to, uint256 amount) external isSolvent {
@@ -271,7 +266,7 @@ contract SyntheticMarket is
             if (
                 !_isSolvent(
                     msg.sender,
-                    ORACLE.getIPXLPTokenUSDPrice(address(COLLATERAL), 1 ether)
+                    ORACLE.getTokenUSDPrice(address(RWA), 1 ether)
                 )
             ) revert SyntheticMarket__InsolventCaller();
     }
@@ -304,16 +299,12 @@ contract SyntheticMarket is
 
             Account memory user = accountOf[account];
 
-            // Liquidator cannot repay more than the what `account` borrowed.
-            // Note the liquidator does not need to close the full position.
             uint256 amountToLiquidate = RWAs[i].min(user.RWA);
 
-            uint256 rewards = (_totalRewardsPerToken.fmul(user.RWA) -
-                user.rewardDebt).toUint128();
+            uint256 rewards = _totalRewardsPerToken.fmul(user.RWA) -
+                user.rewardDebt;
 
             unchecked {
-                // The minimum value is it's own value. So this can never underflow.
-                // Update the userLoan global state
                 user.RWA -= amountToLiquidate.toUint128();
             }
 
@@ -367,23 +358,20 @@ contract SyntheticMarket is
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     function _deposit(address to, uint256 amount) internal {
-        // Save storage state in memory to save gas.
-        Account memory user = accountOf[to];
-
         COLLATERAL.safeTransferFrom(msg.sender, address(this), amount);
 
-        unchecked {
-            user.collateral += amount.toUint128();
-        }
-
         // Update Global state
-        accountOf[to] = user;
+        accountOf[to].collateral += amount.toUint128();
 
         emit Deposit(msg.sender, to, amount);
     }
 
-    function _withdraw(address from, uint256 amount) internal {
-        accountOf[from].collateral -= amount.toUint128();
+    function _withdraw(address to, uint256 amount) internal {
+        accountOf[msg.sender].collateral -= amount.toUint128();
+
+        COLLATERAL.safeTransfer(to, amount);
+
+        emit Withdraw(msg.sender, to, amount);
     }
 
     function _mint(address to, uint256 amount) internal {
@@ -399,9 +387,9 @@ contract SyntheticMarket is
             _totalRewardsPerToken += RWA.claimFees().fdiv(_totalRWA);
 
             unchecked {
-                // Calculate and add how many rewards the user accrued.
-                rewards += (_totalRewardsPerToken.fmul(user.RWA) -
-                    user.rewardDebt).toUint128();
+                rewards +=
+                    _totalRewardsPerToken.fmul(user.RWA) -
+                    user.rewardDebt;
             }
         }
 
@@ -434,11 +422,7 @@ contract SyntheticMarket is
         uint256 rewards;
 
         unchecked {
-            // We do not need to calculate rewards if the user has no open deposits in this contract.
-
-            // Calculate and add how many rewards the user accrued.
-            rewards += (_totalRewardsPerToken.fmul(user.RWA) - user.rewardDebt)
-                .toUint128();
+            rewards += _totalRewardsPerToken.fmul(user.RWA) - user.rewardDebt;
         }
 
         // We want to burn before updating the state
@@ -492,33 +476,22 @@ contract SyntheticMarket is
     }
 
     function _request(uint256 requestAction, bytes calldata data) internal {
+        (address to, uint256 amount) = abi.decode(data, (address, uint256));
+
         if (requestAction == DEPOSIT_REQUEST) {
-            (address to, uint256 amount) = abi.decode(data, (address, uint256));
             return _deposit(to, amount);
         }
 
         if (requestAction == WITHDRAW_REQUEST) {
-            (address to, uint256 amount) = abi.decode(data, (address, uint256));
-            _withdraw(msg.sender, amount);
-
-            COLLATERAL.safeTransfer(to, amount);
-
-            emit Withdraw(msg.sender, to, amount);
-
-            return;
+            return _withdraw(to, amount);
         }
 
         if (requestAction == MINT_REQUEST) {
-            (address to, uint256 amount) = abi.decode(data, (address, uint256));
             return _mint(to, amount);
         }
 
         if (requestAction == BURN_REQUEST) {
-            (address account, uint256 principal) = abi.decode(
-                data,
-                (address, uint256)
-            );
-            return _burn(account, principal);
+            return _burn(to, amount);
         }
 
         revert SyntheticMarket__InvalidRequest();
