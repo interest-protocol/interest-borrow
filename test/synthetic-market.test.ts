@@ -254,7 +254,7 @@ describe('SyntheticMarket', function () {
       );
     });
 
-    it.only('allows withdraws', async () => {
+    it('allows withdraws', async () => {
       const { synthethicMarket, alice, bob, busd } = await loadFixture(
         deployFixture
       );
