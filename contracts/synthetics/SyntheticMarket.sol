@@ -389,7 +389,7 @@ contract SyntheticMarket is
 
         uint256 rewards;
 
-        if (user.synt != 0) {
+        if (_totalSynt != 0) {
             _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalSynt);
 
             unchecked {
@@ -414,6 +414,8 @@ contract SyntheticMarket is
 
         SYNT.mint(to, amount);
         if (rewards != 0) _safeTransferRWA(to, rewards);
+
+        emit Mint(msg.sender, to, amount, rewards);
     }
 
     function _burn(address account, uint256 amount) internal {
@@ -448,6 +450,8 @@ contract SyntheticMarket is
         totalRewardsPerToken = _totalRewardsPerToken;
 
         if (rewards != 0) _safeTransferRWA(account, rewards);
+
+        emit Burn(msg.sender, account, amount, rewards);
     }
 
     function _safeTransferRWA(address to, uint256 amount) internal {

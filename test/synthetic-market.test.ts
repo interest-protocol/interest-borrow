@@ -276,4 +276,127 @@ describe('SyntheticMarket', function () {
         .withArgs(synthethicMarket.address, bob.address, parseEther('100'));
     });
   });
+
+  describe('function: mint', function () {
+    it('reverts if the user is insolvent', async () => {
+      const { synthethicMarket, alice, bob } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(alice).mint(bob.address, 1)
+      ).to.be.revertedWithCustomError(
+        synthethicMarket,
+        'SyntheticMarket__InsolventCaller'
+      );
+
+      await synthethicMarket
+        .connect(alice)
+        .deposit(alice.address, parseEther('1000'));
+
+      await expect(
+        synthethicMarket
+          .connect(alice)
+          .mint(
+            bob.address,
+            parseEther('1000').div(BRL_USD_PRICE).mul(parseEther('1')).add(1)
+          )
+      ).to.be.revertedWithCustomError(
+        synthethicMarket,
+        'SyntheticMarket__InsolventCaller'
+      );
+    });
+
+    it('allows users to create synts', async () => {
+      const { synthethicMarket, alice, bob, SYNT } = await loadFixture(
+        deployFixture
+      );
+
+      await Promise.all([
+        synthethicMarket
+          .connect(alice)
+          .deposit(alice.address, parseEther('1000')),
+        synthethicMarket.connect(bob).deposit(bob.address, parseEther('1000')),
+      ]);
+
+      await expect(
+        synthethicMarket.connect(alice).mint(bob.address, parseEther('100'))
+      )
+        .to.emit(synthethicMarket, 'Mint')
+        .withArgs(alice.address, bob.address, parseEther('100'), 0)
+        .to.emit(SYNT, 'Transfer')
+        .withArgs(ethers.constants.AddressZero, bob.address, parseEther('100'));
+
+      const [aliceAccount, totalSynt, totalRewardsPerToken] = await Promise.all(
+        [
+          synthethicMarket.accountOf(alice.address),
+          synthethicMarket.totalSynt(),
+          synthethicMarket.totalRewardsPerToken(),
+        ]
+      );
+
+      expect(aliceAccount.collateral).to.be.equal(parseEther('1000'));
+      expect(aliceAccount.synt).to.be.equal(parseEther('100'));
+      expect(aliceAccount.rewardDebt).to.be.equal(0);
+      expect(totalSynt).to.be.equal(parseEther('100'));
+      expect(totalRewardsPerToken).to.be.equal(0);
+
+      // 10 SYNT FEE
+      await SYNT.connect(bob).transfer(alice.address, parseEther('100'));
+
+      await expect(
+        synthethicMarket.connect(bob).mint(bob.address, parseEther('50'))
+      )
+        .to.emit(synthethicMarket, 'Mint')
+        .withArgs(bob.address, bob.address, parseEther('50'), 0);
+
+      const [bobAccount2, totalSynt2, totalRewardsPerToken2] =
+        await Promise.all([
+          synthethicMarket.accountOf(bob.address),
+          synthethicMarket.totalSynt(),
+          synthethicMarket.totalRewardsPerToken(),
+        ]);
+
+      expect(bobAccount2.collateral).to.be.equal(parseEther('1000'));
+      expect(bobAccount2.synt).to.be.equal(parseEther('50'));
+      expect(bobAccount2.rewardDebt).to.be.equal(
+        totalRewardsPerToken2.mul(parseEther('50')).div(parseEther('1'))
+      );
+      expect(totalSynt2).to.be.equal(parseEther('150'));
+      expect(totalRewardsPerToken2).to.be.equal(
+        parseEther('9').mul(parseEther('1')).div(parseEther('100'))
+      );
+
+      await expect(synthethicMarket.connect(alice).mint(alice.address, 0))
+        .to.emit(synthethicMarket, 'Mint')
+        .withArgs(alice.address, alice.address, 0, parseEther('9'));
+
+      // 9 Synt Fee
+      await SYNT.connect(alice).transfer(bob.address, parseEther('90'));
+
+      await expect(synthethicMarket.connect(alice).mint(alice.address, 0))
+        .to.emit(synthethicMarket, 'Mint')
+        .withArgs(
+          alice.address,
+          alice.address,
+          0,
+          parseEther('9')
+            .mul(parseEther('0.9'))
+            .div(parseEther('1'))
+            .mul(parseEther('100'))
+            .div(parseEther('150'))
+        );
+
+      await expect(synthethicMarket.connect(bob).mint(alice.address, 0))
+        .to.emit(synthethicMarket, 'Mint')
+        .withArgs(
+          bob.address,
+          alice.address,
+          0,
+          parseEther('9')
+            .mul(parseEther('0.9'))
+            .div(parseEther('1'))
+            .mul(parseEther('50'))
+            .div(parseEther('150'))
+        );
+    });
+  });
 });
