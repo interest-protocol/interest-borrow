@@ -128,7 +128,7 @@ export const getPairDomainSeparator = (
     ]
   );
 
-export const getPairDigest = (
+export const getDigest = (
   domainSeparator: string,
   owner: string,
   spender: string,

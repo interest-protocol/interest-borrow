@@ -84,13 +84,13 @@ contract SyntheticMarket is
 
     struct Account {
         uint128 collateral;
-        uint128 RWA;
+        uint128 synt;
         uint256 rewardDebt;
     }
 
     struct LiquidationInfo {
         uint256 allCollateral;
-        uint256 allRWA;
+        uint256 allSYNT;
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -109,7 +109,7 @@ contract SyntheticMarket is
     /*                       Slot 0                               */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    ERC20Fees public RWA;
+    ERC20Fees public SYNT;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Slot 1                               */
@@ -168,7 +168,7 @@ contract SyntheticMarket is
             (address, IPriceOracle, uint128, uint96)
         );
 
-        RWA = new ERC20Fees(name, symbol, treasury, transferFee);
+        SYNT = new ERC20Fees(name, symbol, treasury, transferFee);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -180,7 +180,7 @@ contract SyntheticMarket is
         if (
             !_isSolvent(
                 msg.sender,
-                ORACLE.getTokenUSDPrice(address(RWA), 1 ether)
+                ORACLE.getTokenUSDPrice(address(SYNT), 1 ether)
             )
         ) revert SyntheticMarket__InsolventCaller();
     }
@@ -195,14 +195,15 @@ contract SyntheticMarket is
         returns (uint256)
     {
         Account memory user = accountOf[account];
-        if (user.RWA == 0) return 0;
+        if (user.synt == 0) return 0;
 
-        uint256 pendingRewardsPerToken = RWA
+        uint256 pendingRewardsPerToken = SYNT
             .deployerBalance()
             .fmul(0.8e18)
             .fdiv(totalRWA) + totalRewardsPerToken;
 
-        return uint256(user.RWA).fmul(pendingRewardsPerToken) - user.rewardDebt;
+        return
+            uint256(user.synt).fmul(pendingRewardsPerToken) - user.rewardDebt;
     }
 
     function deposit(address to, uint256 amount) external {
@@ -225,17 +226,21 @@ contract SyntheticMarket is
         // Save storage state in memory to save gas.
         Account memory user = accountOf[msg.sender];
 
-        if (user.RWA == 0) return;
+        if (user.synt == 0) return;
 
         // Save storage state in memory to save gas.
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
-        _totalRewardsPerToken += RWA.claimFees().fdiv(totalRWA);
+        uint256 feesClaimed = SYNT.claimFees();
 
-        uint256 rewards = _totalRewardsPerToken.fmul(user.RWA) -
+        if (feesClaimed == 0) return;
+
+        _totalRewardsPerToken += feesClaimed.fdiv(totalRWA);
+
+        uint256 rewards = _totalRewardsPerToken.fmul(user.synt) -
             user.rewardDebt;
 
-        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
         // Update Global state
         accountOf[msg.sender] = user;
@@ -266,7 +271,7 @@ contract SyntheticMarket is
             if (
                 !_isSolvent(
                     msg.sender,
-                    ORACLE.getTokenUSDPrice(address(RWA), 1 ether)
+                    ORACLE.getTokenUSDPrice(address(SYNT), 1 ether)
                 )
             ) revert SyntheticMarket__InsolventCaller();
     }
@@ -286,7 +291,7 @@ contract SyntheticMarket is
 
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
-        _totalRewardsPerToken += RWA.claimFees().fdiv(totalRWA);
+        _totalRewardsPerToken += SYNT.claimFees().fdiv(totalRWA);
 
         totalRewardsPerToken = _totalRewardsPerToken;
 
@@ -299,13 +304,13 @@ contract SyntheticMarket is
 
             Account memory user = accountOf[account];
 
-            uint256 amountToLiquidate = RWAs[i].min(user.RWA);
+            uint256 amountToLiquidate = RWAs[i].min(user.synt);
 
-            uint256 rewards = _totalRewardsPerToken.fmul(user.RWA) -
+            uint256 rewards = _totalRewardsPerToken.fmul(user.synt) -
                 user.rewardDebt;
 
             unchecked {
-                user.RWA -= amountToLiquidate.toUint128();
+                user.synt -= amountToLiquidate.toUint128();
             }
 
             uint256 collateralToCover = amountToLiquidate.fmul(exchangeRate);
@@ -316,13 +321,13 @@ contract SyntheticMarket is
             }
 
             user.collateral -= collateralToCover.toUint128();
-            user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+            user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
             // Update Global state
             accountOf[account] = user;
 
             liquidationInfo.allCollateral += collateralToCover;
-            liquidationInfo.allRWA += amountToLiquidate;
+            liquidationInfo.allSYNT += amountToLiquidate;
 
             if (rewards != 0) _safeTransferRWA(account, rewards);
 
@@ -334,10 +339,10 @@ contract SyntheticMarket is
             );
         }
 
-        if (liquidationInfo.allRWA == 0)
+        if (liquidationInfo.allSYNT == 0)
             revert SyntheticMarket__InvalidLiquidationAmount();
 
-        totalRWA -= liquidationInfo.allRWA.toUint128();
+        totalRWA -= liquidationInfo.allSYNT.toUint128();
 
         COLLATERAL.safeTransfer(recipient, liquidationInfo.allCollateral);
 
@@ -347,10 +352,10 @@ contract SyntheticMarket is
                 data,
                 address(COLLATERAL),
                 liquidationInfo.allCollateral,
-                liquidationInfo.allRWA
+                liquidationInfo.allSYNT
             );
 
-        RWA.burn(msg.sender, liquidationInfo.allRWA);
+        SYNT.burn(msg.sender, liquidationInfo.allSYNT);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -383,30 +388,30 @@ contract SyntheticMarket is
 
         uint256 rewards;
 
-        if (user.RWA != 0) {
-            _totalRewardsPerToken += RWA.claimFees().fdiv(_totalRWA);
+        if (user.synt != 0) {
+            _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalRWA);
 
             unchecked {
                 rewards +=
-                    _totalRewardsPerToken.fmul(user.RWA) -
+                    _totalRewardsPerToken.fmul(user.synt) -
                     user.rewardDebt;
             }
         }
 
         // Update local State
-        user.RWA += amount.toUint128();
+        user.synt += amount.toUint128();
 
         unchecked {
             _totalRWA += amount;
         }
-        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
         // Update Global state
         accountOf[msg.sender] = user;
         totalRWA = _totalRWA.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
-        RWA.mint(to, amount);
+        SYNT.mint(to, amount);
         if (rewards != 0) _safeTransferRWA(to, rewards);
     }
 
@@ -417,24 +422,24 @@ contract SyntheticMarket is
         uint256 _totalRWA = totalRWA;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
-        _totalRewardsPerToken += RWA.claimFees().fdiv(_totalRWA);
+        _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalRWA);
 
         uint256 rewards;
 
         unchecked {
-            rewards += _totalRewardsPerToken.fmul(user.RWA) - user.rewardDebt;
+            rewards += _totalRewardsPerToken.fmul(user.synt) - user.rewardDebt;
         }
 
         // We want to burn before updating the state
-        RWA.burn(msg.sender, amount);
+        SYNT.burn(msg.sender, amount);
 
-        user.RWA -= amount.toUint128();
+        user.synt -= amount.toUint128();
 
         unchecked {
             _totalRWA -= amount;
         }
 
-        user.rewardDebt = _totalRewardsPerToken.fmul(user.RWA);
+        user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
         // Update Global state
         accountOf[account] = user;
@@ -445,7 +450,10 @@ contract SyntheticMarket is
     }
 
     function _safeTransferRWA(address to, uint256 amount) internal {
-        address(RWA).safeTransfer(to, amount.min(RWA.balanceOf(address(this))));
+        address(SYNT).safeTransfer(
+            to,
+            amount.min(SYNT.balanceOf(address(this)))
+        );
     }
 
     function _isSolvent(address account, uint256 exchangeRate)
@@ -459,7 +467,7 @@ contract SyntheticMarket is
         Account memory user = accountOf[account];
 
         // Account has no open loans. So he is solvent.
-        if (user.RWA == 0) return true;
+        if (user.synt == 0) return true;
 
         // Account has no collateral so he can not open any loans. He is insolvent.
         if (user.collateral == 0) return false;
@@ -468,7 +476,7 @@ contract SyntheticMarket is
         // Collateral in USD * {maxLTVRatio} has to be greater than principal + interest rate accrued in DINERO which is pegged to USD
         return
             uint256(user.collateral).fmul(maxLTVRatio) >=
-            uint256(user.RWA).fmul(exchangeRate);
+            uint256(user.synt).fmul(exchangeRate);
     }
 
     function _checkForSolvency(uint256 req) internal pure returns (bool pred) {
@@ -502,11 +510,11 @@ contract SyntheticMarket is
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     function setTransferFee(uint256 transferFee) external onlyOwner {
-        RWA.setTransferFee(transferFee);
+        SYNT.setTransferFee(transferFee);
     }
 
     function setTreasury(address treasury) external onlyOwner {
-        RWA.setTreasury(treasury);
+        SYNT.setTreasury(treasury);
     }
 
     function setLiquidationFee(uint256 fee) external onlyOwner {

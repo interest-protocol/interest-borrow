@@ -5,8 +5,8 @@ import { ethers, network } from 'hardhat';
 import { ERC20Fees } from '../typechain-types';
 import {
   deploy,
+  getDigest,
   getECSign,
-  getPairDigest,
   getPairDomainSeparator,
   PRIVATE_KEYS,
 } from './utils';
@@ -232,7 +232,7 @@ describe('ERC20Fees', function () {
       chainId
     );
 
-    const digest = getPairDigest(
+    const digest = getDigest(
       domainSeparator,
       alice.address,
       bob.address,
