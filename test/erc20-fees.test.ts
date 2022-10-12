@@ -345,12 +345,12 @@ describe('ERC20Fees', function () {
 
     await expect(erc20Fees.connect(owner).claimFees())
       .to.emit(erc20Fees, 'Transfer')
-      .withArgs(ethers.constants.AddressZero, owner.address, parseEther('8'))
+      .withArgs(ethers.constants.AddressZero, owner.address, parseEther('9'))
       .to.emit(erc20Fees, 'Transfer')
       .withArgs(
         ethers.constants.AddressZero,
         treasury.address,
-        parseEther('2')
+        parseEther('1')
       );
 
     expect(await erc20Fees.deployerBalance()).to.be.equal(0);

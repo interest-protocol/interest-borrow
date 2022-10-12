@@ -48,7 +48,7 @@ async function deployFixture() {
     [erc20Data, settingsData]
   );
 
-  const rwa = await synthethicMarket.RWA();
+  const synt = await synthethicMarket.SYNT();
 
   const priceFeed: PriceFeed = await deploy('PriceFeed');
 
@@ -56,10 +56,10 @@ async function deployFixture() {
     BRL_USD_PRICE.div(ethers.BigNumber.from('10000000000'))
   );
 
-  const RWA = (await ethers.getContractFactory('ERC20Fees')).attach(rwa);
+  const SYNT = (await ethers.getContractFactory('ERC20Fees')).attach(synt);
 
   await Promise.all([
-    priceOracle.setUSDFeed(rwa, priceFeed.address),
+    priceOracle.setUSDFeed(synt, priceFeed.address),
     busd.mint(alice.address, parseEther('10000')),
     busd.mint(bob.address, parseEther('10000')),
     busd.mint(jose.address, parseEther('10000')),
@@ -83,7 +83,7 @@ async function deployFixture() {
     bob,
     jose,
     treasury,
-    RWA,
+    SYNT,
     priceFeed,
   };
 }
@@ -91,21 +91,21 @@ async function deployFixture() {
 describe('SyntheticMarket', function () {
   describe('initialize', function () {
     it('initializes properly', async () => {
-      const { synthethicMarket, owner, RWA, treasury } = await loadFixture(
+      const { synthethicMarket, owner, SYNT, treasury } = await loadFixture(
         deployFixture
       );
 
-      const [rwa, _owner, maxLTVRatio, liquidationFee, _treasury] =
+      const [synt, _owner, maxLTVRatio, liquidationFee, _treasury] =
         await Promise.all([
-          synthethicMarket.RWA(),
+          synthethicMarket.SYNT(),
           synthethicMarket.owner(),
           synthethicMarket.maxLTVRatio(),
           synthethicMarket.liquidationFee(),
-          RWA.treasury(),
-          RWA.transferFee(),
+          SYNT.treasury(),
+          SYNT.transferFee(),
         ]);
 
-      expect(rwa).to.be.equal(RWA.address);
+      expect(synt).to.be.equal(SYNT.address);
       expect(_owner).to.be.equal(owner.address);
       expect(maxLTVRatio).to.be.equal(MAX_LTV_RATIO);
       expect(liquidationFee).to.be.equal(LIQUIDATION_FEE);
@@ -121,8 +121,9 @@ describe('SyntheticMarket', function () {
       ).to.revertedWith('Initializable: contract is already initialized');
     });
   });
+
   describe('function: getPendingRewards', function () {
-    it('returns 0 if there is no collateral', async () => {
+    it('returns 0 if there is the user did not mint any Synt', async () => {
       const { synthethicMarket, alice } = await loadFixture(deployFixture);
       expect(
         await synthethicMarket.getPendingRewards(alice.address)
@@ -130,7 +131,7 @@ describe('SyntheticMarket', function () {
     });
 
     it('returns the pending rewards', async () => {
-      const { synthethicMarket, alice, bob, RWA } = await loadFixture(
+      const { synthethicMarket, alice, bob, SYNT } = await loadFixture(
         deployFixture
       );
 
@@ -142,11 +143,11 @@ describe('SyntheticMarket', function () {
         .connect(alice)
         .mint(alice.address, parseEther('1000'));
 
-      await RWA.connect(alice).transfer(bob.address, parseEther('100'));
+      await SYNT.connect(alice).transfer(bob.address, parseEther('100'));
 
       expect(
         await synthethicMarket.getPendingRewards(alice.address)
-      ).to.be.equal(parseEther('8'));
+      ).to.be.equal(parseEther('9'));
 
       expect(await synthethicMarket.getPendingRewards(bob.address)).to.be.equal(
         0
@@ -155,95 +156,61 @@ describe('SyntheticMarket', function () {
   });
 
   it('accepts deposits', async () => {
-    const { synthethicMarket, alice, busd, RWA, bob } = await loadFixture(
+    const { synthethicMarket, alice, busd, SYNT, bob } = await loadFixture(
       deployFixture
     );
 
-    const [aliceAccount, totalCollateral, totalRewardsPerToken] =
-      await Promise.all([
-        synthethicMarket.accountOf(alice.address),
-        synthethicMarket.totalCollateral(),
-        synthethicMarket.totalRewardsPerToken(),
-      ]);
+    const [aliceAccount, totalSynt, totalRewardsPerToken] = await Promise.all([
+      synthethicMarket.accountOf(alice.address),
+      synthethicMarket.totalSynt(),
+      synthethicMarket.totalRewardsPerToken(),
+    ]);
 
     expect(aliceAccount.collateral).to.be.equal(0);
-    expect(aliceAccount.RWA).to.be.equal(0);
+    expect(aliceAccount.synt).to.be.equal(0);
     expect(aliceAccount.rewardDebt).to.be.equal(0);
-    expect(totalCollateral).to.be.equal(0);
+    expect(totalSynt).to.be.equal(0);
     expect(totalRewardsPerToken).to.be.equal(0);
 
     await expect(
       synthethicMarket.connect(alice).deposit(alice.address, parseEther('1000'))
     )
       .to.emit(synthethicMarket, 'Deposit')
-      .withArgs(alice.address, alice.address, parseEther('1000'), 0)
+      .withArgs(alice.address, alice.address, parseEther('1000'))
       .to.emit(busd, 'Transfer')
       .withArgs(alice.address, synthethicMarket.address, parseEther('1000'));
 
-    const [aliceAccount2, totalCollateral2, totalRewardsPerToken2] =
+    const [aliceAccount2, totalSynt2, totalRewardsPerToken2] =
       await Promise.all([
         synthethicMarket.accountOf(alice.address),
-        synthethicMarket.totalCollateral(),
+        synthethicMarket.totalSynt(),
         synthethicMarket.totalRewardsPerToken(),
       ]);
 
     expect(aliceAccount2.collateral).to.be.equal(parseEther('1000'));
-    expect(aliceAccount2.RWA).to.be.equal(0);
+    expect(aliceAccount2.synt).to.be.equal(0);
     expect(aliceAccount2.rewardDebt).to.be.equal(0);
-    expect(totalCollateral2).to.be.equal(parseEther('1000'));
+    expect(totalSynt2).to.be.equal(0);
     expect(totalRewardsPerToken2).to.be.equal(0);
 
     await synthethicMarket
       .connect(alice)
       .mint(alice.address, parseEther('200'));
 
-    await RWA.connect(alice).transfer(bob.address, parseEther('100'));
+    await SYNT.connect(alice).transfer(bob.address, parseEther('100'));
 
     await synthethicMarket.connect(bob).deposit(bob.address, parseEther('500'));
 
-    const [bobAccount3, totalCollateral3, totalRewardsPerToken3] =
-      await Promise.all([
-        synthethicMarket.accountOf(bob.address),
-        synthethicMarket.totalCollateral(),
-        synthethicMarket.totalRewardsPerToken(),
-      ]);
+    const [bobAccount3, totalSynt3] = await Promise.all([
+      synthethicMarket.accountOf(bob.address),
+      synthethicMarket.totalSynt(),
+      synthethicMarket.totalRewardsPerToken(),
+    ]);
 
-    expect(bobAccount3.RWA).to.be.equal(0);
+    expect(bobAccount3.synt).to.be.equal(0);
     expect(bobAccount3.collateral).to.be.equal(parseEther('500'));
-    expect(bobAccount3.rewardDebt).to.be.equal(
-      parseEther('500').mul(totalRewardsPerToken3).div(parseEther('1'))
-    );
-    expect(totalCollateral3).to.be.equal(parseEther('1500'));
-
-    await expect(synthethicMarket.connect(alice).deposit(alice.address, 0))
-      .to.emit(synthethicMarket, 'Deposit')
-      .withArgs(alice.address, alice.address, 0, parseEther('8'));
-
-    expect(
-      (await synthethicMarket.accountOf(alice.address)).rewardDebt
-    ).to.be.equal(
-      parseEther('1000').mul(totalRewardsPerToken3).div(parseEther('1'))
-    );
-
-    await RWA.connect(alice).transfer(bob.address, parseEther('100'));
-
-    await expect(synthethicMarket.connect(alice).deposit(alice.address, 0))
-      .to.emit(synthethicMarket, 'Deposit')
-      .withArgs(alice.address, alice.address, 0, anyUint);
-
-    const totalRewardsPerToken4 = await synthethicMarket.totalRewardsPerToken();
-
-    await expect(synthethicMarket.connect(bob).deposit(bob.address, 0))
-      .to.emit(synthethicMarket, 'Deposit')
-      .withArgs(
-        bob.address,
-        bob.address,
-        0,
-        totalRewardsPerToken4
-          .mul(parseEther('500'))
-          .div(parseEther('1'))
-          .sub(bobAccount3.rewardDebt)
-      );
+    expect(bobAccount3.rewardDebt).to.be.equal(0);
+    expect(totalSynt3).to.be.equal(parseEther('200'));
   });
 
   describe('function: withdraw', function () {
@@ -288,7 +255,7 @@ describe('SyntheticMarket', function () {
     });
 
     it.only('allows withdraws', async () => {
-      const { synthethicMarket, alice, bob, RWA } = await loadFixture(
+      const { synthethicMarket, alice, bob, busd } = await loadFixture(
         deployFixture
       );
 
@@ -300,13 +267,13 @@ describe('SyntheticMarket', function () {
         .connect(alice)
         .mint(alice.address, parseEther('100'));
 
-      await RWA.connect(alice).transfer(bob.address, parseEther('100'));
-
-      await synthethicMarket
-        .connect(bob)
-        .deposit(bob.address, parseEther('10000'));
-
-      await synthethicMarket.connect(bob).mint(bob.address, parseEther('100'));
+      await expect(
+        synthethicMarket.connect(alice).withdraw(bob.address, parseEther('100'))
+      )
+        .to.emit(synthethicMarket, 'Withdraw')
+        .withArgs(alice.address, bob.address, parseEther('100'))
+        .to.emit(busd, 'Transfer')
+        .withArgs(synthethicMarket.address, bob.address, parseEther('100'));
     });
   });
 });

@@ -266,7 +266,7 @@ contract ERC20Fees {
         delete deployerBalance;
         totalSupply += amount;
 
-        uint256 treasuryAmount = amount.fmul(0.2e18);
+        uint256 treasuryAmount = amount.fmul(0.1e18);
         amount -= treasuryAmount;
 
         // Cannot overflow because the sum of all user

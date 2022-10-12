@@ -131,7 +131,7 @@ contract SyntheticMarket is
 
     uint128 public maxLTVRatio;
 
-    uint128 public totalRWA;
+    uint128 public totalSynt;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Slot 4                               */
@@ -195,12 +195,13 @@ contract SyntheticMarket is
         returns (uint256)
     {
         Account memory user = accountOf[account];
+
         if (user.synt == 0) return 0;
 
         uint256 pendingRewardsPerToken = SYNT
             .deployerBalance()
-            .fmul(0.8e18)
-            .fdiv(totalRWA) + totalRewardsPerToken;
+            .fmul(0.9e18)
+            .fdiv(totalSynt) + totalRewardsPerToken;
 
         return
             uint256(user.synt).fmul(pendingRewardsPerToken) - user.rewardDebt;
@@ -235,7 +236,7 @@ contract SyntheticMarket is
 
         if (feesClaimed == 0) return;
 
-        _totalRewardsPerToken += feesClaimed.fdiv(totalRWA);
+        _totalRewardsPerToken += feesClaimed.fdiv(totalSynt);
 
         uint256 rewards = _totalRewardsPerToken.fmul(user.synt) -
             user.rewardDebt;
@@ -291,7 +292,7 @@ contract SyntheticMarket is
 
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
-        _totalRewardsPerToken += SYNT.claimFees().fdiv(totalRWA);
+        _totalRewardsPerToken += SYNT.claimFees().fdiv(totalSynt);
 
         totalRewardsPerToken = _totalRewardsPerToken;
 
@@ -342,7 +343,7 @@ contract SyntheticMarket is
         if (liquidationInfo.allSYNT == 0)
             revert SyntheticMarket__InvalidLiquidationAmount();
 
-        totalRWA -= liquidationInfo.allSYNT.toUint128();
+        totalSynt -= liquidationInfo.allSYNT.toUint128();
 
         COLLATERAL.safeTransfer(recipient, liquidationInfo.allCollateral);
 
@@ -383,13 +384,13 @@ contract SyntheticMarket is
         // Save storage state in memory to save gas.
         Account memory user = accountOf[msg.sender];
 
-        uint256 _totalRWA = totalRWA;
+        uint256 _totalSynt = totalSynt;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
         uint256 rewards;
 
         if (user.synt != 0) {
-            _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalRWA);
+            _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalSynt);
 
             unchecked {
                 rewards +=
@@ -402,13 +403,13 @@ contract SyntheticMarket is
         user.synt += amount.toUint128();
 
         unchecked {
-            _totalRWA += amount;
+            _totalSynt += amount;
         }
         user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
         // Update Global state
         accountOf[msg.sender] = user;
-        totalRWA = _totalRWA.toUint128();
+        totalSynt = _totalSynt.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
         SYNT.mint(to, amount);
@@ -419,10 +420,10 @@ contract SyntheticMarket is
         // Save storage state in memory to save gas.
         Account memory user = accountOf[account];
 
-        uint256 _totalRWA = totalRWA;
+        uint256 _totalSynt = totalSynt;
         uint256 _totalRewardsPerToken = totalRewardsPerToken;
 
-        _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalRWA);
+        _totalRewardsPerToken += SYNT.claimFees().fdiv(_totalSynt);
 
         uint256 rewards;
 
@@ -436,14 +437,14 @@ contract SyntheticMarket is
         user.synt -= amount.toUint128();
 
         unchecked {
-            _totalRWA -= amount;
+            _totalSynt -= amount;
         }
 
         user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
         // Update Global state
         accountOf[account] = user;
-        totalRWA = _totalRWA.toUint128();
+        totalSynt = _totalSynt.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
         if (rewards != 0) _safeTransferRWA(account, rewards);
