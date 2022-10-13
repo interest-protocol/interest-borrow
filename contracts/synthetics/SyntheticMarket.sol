@@ -247,9 +247,10 @@ contract SyntheticMarket is
         accountOf[msg.sender] = user;
         totalRewardsPerToken = _totalRewardsPerToken;
 
-        if (rewards != 0) _safeTransferRWA(msg.sender, rewards);
-
-        emit GetRewards(msg.sender, rewards);
+        if (rewards != 0) {
+            _safeTransferRWA(msg.sender, rewards);
+            emit GetRewards(msg.sender, rewards);
+        }
     }
 
     function request(uint256[] calldata requests, bytes[] calldata requestArgs)
@@ -317,7 +318,6 @@ contract SyntheticMarket is
             uint256 collateralToCover = amountToLiquidate.fmul(exchangeRate);
 
             unchecked {
-                // Calculate the collateralFee (for the liquidator and the protocol)
                 collateralToCover += collateralToCover.fmul(liquidationFee);
             }
 

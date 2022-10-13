@@ -399,4 +399,293 @@ describe('SyntheticMarket', function () {
         );
     });
   });
+
+  describe('function: burn', function () {
+    it('reverts if the user does not have enough tokens to burn', async () => {
+      const { synthethicMarket, alice } = await loadFixture(deployFixture);
+
+      await synthethicMarket
+        .connect(alice)
+        .deposit(alice.address, parseEther('1000'));
+
+      await synthethicMarket
+        .connect(alice)
+        .mint(alice.address, parseEther('100'));
+
+      await expect(
+        synthethicMarket
+          .connect(alice)
+          .burn(alice.address, parseEther('100').add(1))
+      ).to.be.reverted;
+    });
+
+    it('allows a user to burn', async () => {
+      const { synthethicMarket, alice, bob, SYNT } = await loadFixture(
+        deployFixture
+      );
+
+      await Promise.all([
+        synthethicMarket
+          .connect(alice)
+          .deposit(alice.address, parseEther('1000')),
+        synthethicMarket.connect(bob).deposit(bob.address, parseEther('1000')),
+      ]);
+
+      await synthethicMarket
+        .connect(alice)
+        .mint(bob.address, parseEther('100'));
+
+      const [aliceAccount, totalSynt, totalRewardsPerToken] = await Promise.all(
+        [
+          synthethicMarket.accountOf(alice.address),
+          synthethicMarket.totalSynt(),
+          synthethicMarket.totalRewardsPerToken(),
+        ]
+      );
+
+      expect(aliceAccount.collateral).to.be.equal(parseEther('1000'));
+      expect(aliceAccount.synt).to.be.equal(parseEther('100'));
+      expect(aliceAccount.rewardDebt).to.be.equal(0);
+      expect(totalSynt).to.be.equal(parseEther('100'));
+      expect(totalRewardsPerToken).to.be.equal(0);
+
+      // 10 SYNT FEE
+      await SYNT.connect(bob).transfer(alice.address, parseEther('100'));
+
+      await synthethicMarket.connect(bob).mint(bob.address, parseEther('50'));
+
+      await expect(
+        synthethicMarket.connect(alice).burn(alice.address, parseEther('10'))
+      )
+        .to.emit(synthethicMarket, 'Burn')
+        .withArgs(
+          alice.address,
+          alice.address,
+          parseEther('10'),
+          parseEther('9')
+        );
+
+      const [aliceAccount2, totalSynt2, totalRewardsPerToken2] =
+        await Promise.all([
+          synthethicMarket.accountOf(alice.address),
+          synthethicMarket.totalSynt(),
+          synthethicMarket.totalRewardsPerToken(),
+        ]);
+
+      expect(aliceAccount2.collateral).to.be.equal(parseEther('1000'));
+      expect(aliceAccount2.synt).to.be.equal(parseEther('90'));
+      expect(aliceAccount2.rewardDebt).to.be.equal(
+        totalRewardsPerToken2.mul(parseEther('90')).div(parseEther('1'))
+      );
+      expect(totalSynt2).to.be.equal(parseEther('140'));
+      expect(totalRewardsPerToken2).to.be.equal(
+        parseEther('9').mul(parseEther('1')).div(parseEther('100'))
+      );
+
+      // 5 SYNT FEE
+      await SYNT.connect(alice).transfer(bob.address, parseEther('50'));
+
+      await expect(
+        synthethicMarket.connect(alice).burn(alice.address, parseEther('10'))
+      )
+        .to.emit(synthethicMarket, 'Burn')
+        .withArgs(
+          alice.address,
+          alice.address,
+          parseEther('10'),
+          parseEther('5')
+            .mul(parseEther('0.9'))
+            .div(parseEther('1'))
+            .mul(parseEther('1'))
+            .div(parseEther('140'))
+            .add(totalRewardsPerToken2)
+            .mul(parseEther('90'))
+            .div(parseEther('1'))
+            .sub(aliceAccount2.rewardDebt)
+        );
+
+      const [totalRewardsPerToken3, bobAccount3] = await Promise.all([
+        synthethicMarket.totalRewardsPerToken(),
+        synthethicMarket.accountOf(bob.address),
+      ]);
+
+      await expect(
+        synthethicMarket.connect(bob).burn(bob.address, parseEther('10'))
+      )
+        .to.emit(synthethicMarket, 'Burn')
+        .withArgs(
+          bob.address,
+          bob.address,
+          parseEther('10'),
+          totalRewardsPerToken3
+            .mul(parseEther('50'))
+            .div(parseEther('1'))
+            .sub(bobAccount3.rewardDebt)
+        );
+    });
+  });
+
+  it('allows a user to get his/her rewards', async () => {
+    const { synthethicMarket, alice, bob, SYNT } = await loadFixture(
+      deployFixture
+    );
+
+    await expect(synthethicMarket.connect(alice).getRewards()).to.not.emit(
+      SYNT,
+      'Transfer'
+    );
+
+    await Promise.all([
+      synthethicMarket
+        .connect(alice)
+        .deposit(alice.address, parseEther('1000')),
+      synthethicMarket.connect(bob).deposit(bob.address, parseEther('1000')),
+    ]);
+
+    await Promise.all([
+      synthethicMarket.connect(alice).mint(alice.address, parseEther('100')),
+      synthethicMarket.connect(bob).mint(bob.address, parseEther('100')),
+    ]);
+
+    await SYNT.connect(alice).transfer(bob.address, parseEther('100'));
+
+    await expect(synthethicMarket.connect(alice).getRewards())
+      .to.emit(synthethicMarket, 'GetRewards')
+      .withArgs(alice.address, parseEther('4.5'))
+      .to.emit(SYNT, 'Transfer')
+      .withArgs(synthethicMarket.address, alice.address, parseEther('4.5'));
+
+    const [totalRewardsPerToken, aliceAccount] = await Promise.all([
+      synthethicMarket.totalRewardsPerToken(),
+      synthethicMarket.accountOf(alice.address),
+    ]);
+
+    expect(totalRewardsPerToken).to.be.equal(
+      parseEther('9').mul(parseEther('1')).div(parseEther('200'))
+    );
+    expect(aliceAccount.rewardDebt).to.be.equal(
+      totalRewardsPerToken.mul(aliceAccount.synt).div(parseEther('1'))
+    );
+  });
+
+  describe('function: setTransferFee', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { synthethicMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(alice).setTransferFee(1)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('updates the transfer fee', async () => {
+      const { synthethicMarket, SYNT, owner } = await loadFixture(
+        deployFixture
+      );
+
+      expect(await SYNT.transferFee()).to.be.equal(TRANSFER_FEE);
+
+      await synthethicMarket.connect(owner).setTransferFee(0);
+
+      expect(await SYNT.transferFee()).to.be.equal(0);
+    });
+  });
+
+  describe('function: setTreasury', function () {
+    it('reverts if it is not called by the owner', async () => {
+      const { synthethicMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(alice).setTreasury(alice.address)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('updates the treasury', async () => {
+      const { synthethicMarket, SYNT, owner, alice, treasury } =
+        await loadFixture(deployFixture);
+
+      expect(await SYNT.treasury()).to.be.equal(treasury.address);
+
+      await synthethicMarket.connect(owner).setTransferFee(alice.address);
+
+      expect(await SYNT.transferFee()).to.be.equal(alice.address);
+    });
+  });
+
+  describe('function: setLiquidationFee', function () {
+    it('reverts if it is not called by the ower', async () => {
+      const { synthethicMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(alice).setLiquidationFee(1)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('reverts if the fee is higher than 20%', async () => {
+      const { synthethicMarket, owner } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket
+          .connect(owner)
+          .setLiquidationFee(parseEther('0.2').add(1))
+      ).to.be.revertedWithCustomError(
+        synthethicMarket,
+        'SyntheticMarket__InvalidFee'
+      );
+    });
+
+    it('updates the liquidation fee', async () => {
+      const { synthethicMarket, owner } = await loadFixture(deployFixture);
+
+      expect(await synthethicMarket.liquidationFee()).to.be.equal(
+        LIQUIDATION_FEE
+      );
+
+      await expect(
+        synthethicMarket.connect(owner).setLiquidationFee(parseEther('0.05'))
+      )
+        .to.emit(synthethicMarket, 'LiquidationFeeUpdated')
+        .withArgs(LIQUIDATION_FEE, parseEther('0.05'));
+
+      expect(await synthethicMarket.liquidationFee()).to.be.equal(
+        parseEther('0.05')
+      );
+    });
+  });
+
+  describe('function: setMaxLTVRatio', function () {
+    it('reverts if it is not called by the ower', async () => {
+      const { synthethicMarket, alice } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(alice).setMaxLTVRatio(1)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it('reverts if the fee is higher than 90%', async () => {
+      const { synthethicMarket, owner } = await loadFixture(deployFixture);
+
+      await expect(
+        synthethicMarket.connect(owner).setMaxLTVRatio(parseEther('0.9').add(1))
+      ).to.be.revertedWithCustomError(
+        synthethicMarket,
+        'SyntheticMarket__InvalidFee'
+      );
+    });
+
+    it('updates the max ltv ratio', async () => {
+      const { synthethicMarket, owner } = await loadFixture(deployFixture);
+
+      expect(await synthethicMarket.maxLTVRatio()).to.be.equal(MAX_LTV_RATIO);
+
+      await expect(
+        synthethicMarket.connect(owner).setMaxLTVRatio(parseEther('0.8'))
+      )
+        .to.emit(synthethicMarket, 'MaxLTVRatioUpdated')
+        .withArgs(MAX_LTV_RATIO, parseEther('0.8'));
+
+      expect(await synthethicMarket.maxLTVRatio()).to.be.equal(
+        parseEther('0.8')
+      );
+    });
+  });
 });
