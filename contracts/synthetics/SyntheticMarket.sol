@@ -280,14 +280,11 @@ contract SyntheticMarket is
 
     function liquidate(
         address[] calldata accounts,
-        uint256[] calldata RWAs,
+        uint256[] calldata synts,
         address recipient,
         bytes calldata data
     ) external {
-        uint256 exchangeRate = ORACLE.getTokenUSDPrice(
-            address(COLLATERAL),
-            1 ether
-        );
+        uint256 exchangeRate = ORACLE.getTokenUSDPrice(address(SYNT), 1 ether);
 
         LiquidationInfo memory liquidationInfo;
 
@@ -306,7 +303,7 @@ contract SyntheticMarket is
 
             Account memory user = accountOf[account];
 
-            uint256 amountToLiquidate = RWAs[i].min(user.synt);
+            uint256 amountToLiquidate = synts[i].min(user.synt);
 
             uint256 rewards = _totalRewardsPerToken.fmul(user.synt) -
                 user.rewardDebt;
