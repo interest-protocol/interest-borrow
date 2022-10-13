@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
-import "../../NativeTokenMarket.sol";
+import "../../dinero-markets/NativeTokenMarket.sol";
 
 contract NativeTokenMarketV2 is NativeTokenMarket {
     function version() external pure returns (string memory) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
-import "../NativeTokenMarket.sol";
+import "../dinero-markets/NativeTokenMarket.sol";
 
 contract TestNativeTokenMarket is NativeTokenMarket {
     function setOracle(IPriceOracle oracle) external {
