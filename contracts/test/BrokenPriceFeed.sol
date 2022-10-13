@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 // Note Just to get the artifacts
 import "@interest-protocol/dex/Factory.sol";

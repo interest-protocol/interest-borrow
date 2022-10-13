@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -14,8 +14,8 @@ import "@interest-protocol/library/RebaseLib.sol";
 import "@interest-protocol/library/SafeTransferErrors.sol";
 import "@interest-protocol/library/SafeTransferLib.sol";
 
-import "./interfaces/IPriceOracle.sol";
-import "./interfaces/ISwap.sol";
+import "../interfaces/IPriceOracle.sol";
+import "../interfaces/ISwap.sol";
 
 /**
  * @dev This contract cannot be used with ERC20 tokens that do not have 18 decimals and we will avoid upgradeable ERC20 contracts.
@@ -270,7 +270,7 @@ contract ERC20Market is
         _;
         if (
             !_isSolvent(
-                _msgSender(),
+                msg.sender,
                 ORACLE.getTokenUSDPrice(address(COLLATERAL), 1 ether)
             )
         ) revert ERC20Market__InsolventCaller();
@@ -372,7 +372,7 @@ contract ERC20Market is
         if (checkForSolvency)
             if (
                 !_isSolvent(
-                    _msgSender(),
+                    msg.sender,
                     ORACLE.getTokenUSDPrice(
                         address(COLLATERAL),
                         // Interest DEX LP tokens have 18 decimals
@@ -460,7 +460,7 @@ contract ERC20Market is
             accountOf[account] = userAccount;
 
             emit Liquidate(
-                _msgSender(),
+                msg.sender,
                 account,
                 principal,
                 debt,
@@ -509,7 +509,7 @@ contract ERC20Market is
             );
 
         // This step we destroy `DINERO` equivalent to all outstanding debt.
-        DNR.burn(_msgSender(), liquidationInfo.allDebt);
+        DNR.burn(msg.sender, liquidationInfo.allDebt);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -545,21 +545,21 @@ contract ERC20Market is
         if (address(0) == to) revert ERC20Market__InvalidAddress();
 
         // We want to get the tokens before updating the state
-        COLLATERAL.safeTransferFrom(_msgSender(), address(this), amount);
+        COLLATERAL.safeTransferFrom(msg.sender, address(this), amount);
 
         accountOf[to].collateral += amount.toUint128();
 
-        emit Deposit(_msgSender(), to, amount);
+        emit Deposit(msg.sender, to, amount);
     }
 
     function _withdraw(address to, uint256 amount) internal {
         if (0 == amount) revert ERC20Market__InvalidAmount();
 
-        accountOf[_msgSender()].collateral -= amount.toUint128();
+        accountOf[msg.sender].collateral -= amount.toUint128();
 
         COLLATERAL.safeTransfer(to, amount);
 
-        emit Withdraw(_msgSender(), to, amount);
+        emit Withdraw(msg.sender, to, amount);
     }
 
     /**
@@ -580,13 +580,13 @@ contract ERC20Market is
 
         // loan.elastic will overflow before the principal.
         unchecked {
-            accountOf[_msgSender()].principal += principal.toUint128();
+            accountOf[msg.sender].principal += principal.toUint128();
         }
 
         // Note the `msg.sender` can use his collateral to lend to someone else.
         DNR.mint(to, amount);
 
-        emit Borrow(_msgSender(), to, principal, amount);
+        emit Borrow(msg.sender, to, principal, amount);
     }
 
     /**
@@ -603,12 +603,12 @@ contract ERC20Market is
         (loan, debt) = loan.sub(principal, true);
 
         // Since all debt is in `DINERO`. We can simply burn it from the `msg.sender`
-        DNR.burn(_msgSender(), debt);
+        DNR.burn(msg.sender, debt);
 
         // Update Global state
         accountOf[account].principal -= principal.toUint128();
 
-        emit Repay(_msgSender(), account, principal, debt);
+        emit Repay(msg.sender, account, principal, debt);
     }
 
     /**

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
-import "../LPFreeMarket.sol";
+import "../dinero-markets/LPFreeMarket.sol";
 
 contract TestLPFreeMarket is LPFreeMarket {
     function setOracle(IPriceOracle oracle) external {
