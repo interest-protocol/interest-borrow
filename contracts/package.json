@@ -1,7 +1,7 @@
 {
   "name": "@interest-protocol/lending",
   "description": "Core contracts for Interest Protocol Lending Markets",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "publishConfig": {
     "access": "public"
   },
