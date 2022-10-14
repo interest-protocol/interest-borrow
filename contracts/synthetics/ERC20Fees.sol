@@ -93,7 +93,7 @@ contract ERC20Fees {
         transferFee = _transferFee;
 
         INITIAL_CHAIN_ID = block.chainid;
-        INITIAL_DOMAIN_SEPARATOR = computeDomainSeparator();
+        INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -154,7 +154,7 @@ contract ERC20Fees {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public virtual {
+    ) external {
         if (block.timestamp > deadline) revert ERC20Fees__DeadlineExpired();
 
         // Unchecked because the only math done is incrementing
@@ -193,14 +193,14 @@ contract ERC20Fees {
         emit Approval(owner, spender, value);
     }
 
-    function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
         return
             block.chainid == INITIAL_CHAIN_ID
                 ? INITIAL_DOMAIN_SEPARATOR
-                : computeDomainSeparator();
+                : _computeDomainSeparator();
     }
 
-    function computeDomainSeparator() internal view virtual returns (bytes32) {
+    function _computeDomainSeparator() internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
