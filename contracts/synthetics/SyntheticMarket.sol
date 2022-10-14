@@ -60,7 +60,7 @@ contract SyntheticMarket is
     event Liquidate(
         address indexed liquidator,
         address indexed debtor,
-        uint256 rwa,
+        uint256 synt,
         uint256 collateral
     );
 
@@ -248,7 +248,7 @@ contract SyntheticMarket is
         totalRewardsPerToken = _totalRewardsPerToken;
 
         if (rewards != 0) {
-            _safeTransferRWA(msg.sender, rewards);
+            _safeTransferSynt(msg.sender, rewards);
             emit GetRewards(msg.sender, rewards);
         }
     }
@@ -327,7 +327,7 @@ contract SyntheticMarket is
             liquidationInfo.allCollateral += collateralToCover;
             liquidationInfo.allSYNT += amountToLiquidate;
 
-            if (rewards != 0) _safeTransferRWA(account, rewards);
+            if (rewards != 0) _safeTransferSynt(account, rewards);
 
             emit Liquidate(
                 msg.sender,
@@ -410,7 +410,7 @@ contract SyntheticMarket is
         totalRewardsPerToken = _totalRewardsPerToken;
 
         SYNT.mint(to, amount);
-        if (rewards != 0) _safeTransferRWA(to, rewards);
+        if (rewards != 0) _safeTransferSynt(to, rewards);
 
         emit Mint(msg.sender, to, amount, rewards);
     }
@@ -446,12 +446,12 @@ contract SyntheticMarket is
         totalSynt = _totalSynt.toUint128();
         totalRewardsPerToken = _totalRewardsPerToken;
 
-        if (rewards != 0) _safeTransferRWA(account, rewards);
+        if (rewards != 0) _safeTransferSynt(account, rewards);
 
         emit Burn(msg.sender, account, amount, rewards);
     }
 
-    function _safeTransferRWA(address to, uint256 amount) internal {
+    function _safeTransferSynt(address to, uint256 amount) internal {
         address(SYNT).safeTransfer(
             to,
             amount.min(SYNT.balanceOf(address(this)))
