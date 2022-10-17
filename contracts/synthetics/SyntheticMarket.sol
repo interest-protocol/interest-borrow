@@ -396,11 +396,11 @@ contract SyntheticMarket is
             }
         }
 
-        // Update local State
-        user.synt += amount.toUint128();
+        _totalSynt += amount;
 
         unchecked {
-            _totalSynt += amount;
+            // Update local State
+            user.synt += amount.toUint128();
         }
         user.rewardDebt = _totalRewardsPerToken.fmul(user.synt);
 
