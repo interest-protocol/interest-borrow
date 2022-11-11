@@ -3,6 +3,8 @@ pragma solidity 0.8.17;
 
 import "@interest-protocol/library/MathLib.sol";
 
+import "../interfaces/ISyntheticManager.sol";
+
 contract ERC20Fees {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Libraries                            */
@@ -23,8 +25,6 @@ contract ERC20Fees {
     );
 
     event TransferFeeUpdated(uint256 oldFee, uint256 newFee);
-
-    event TreasuryUpdated(address oldAddress, address newAddress);
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Errors                               */
@@ -70,8 +70,6 @@ contract ERC20Fees {
 
     address public immutable DEPLOYER_CONTRACT;
 
-    address public treasury;
-
     uint256 public transferFee;
 
     uint256 public deployerBalance;
@@ -83,13 +81,11 @@ contract ERC20Fees {
     constructor(
         string memory _name,
         string memory _symbol,
-        address _treasury,
         uint256 _transferFee
     ) {
         name = _name;
         symbol = _symbol;
         DEPLOYER_CONTRACT = msg.sender;
-        treasury = _treasury;
         transferFee = _transferFee;
 
         INITIAL_CHAIN_ID = block.chainid;
@@ -252,11 +248,6 @@ contract ERC20Fees {
         transferFee = _transferFee;
     }
 
-    function setTreasury(address _treasury) external onlyDeployer {
-        emit TreasuryUpdated(treasury, _treasury);
-        treasury = _treasury;
-    }
-
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Fee Logic                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -268,6 +259,8 @@ contract ERC20Fees {
 
         uint256 treasuryAmount = amount.fmul(0.1e18);
         amount -= treasuryAmount;
+
+        address treasury = ISyntheticManager(DEPLOYER_CONTRACT).treasury();
 
         // Cannot overflow because the sum of all user
         // balances can't exceed the max uint256 value.
