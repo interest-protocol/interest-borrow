@@ -26,6 +26,10 @@ contract ERC20Fees {
 
     event TransferFeeUpdated(uint256 oldFee, uint256 newFee);
 
+    event CreatorAdded(address indexed creator);
+
+    event CreatorRemoved(address indexed creator);
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Errors                               */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -73,6 +77,8 @@ contract ERC20Fees {
     uint256 public transferFee;
 
     uint256 public deployerBalance;
+
+    mapping(address => bool) public isCreator;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Constructor                          */
@@ -248,6 +254,16 @@ contract ERC20Fees {
         transferFee = _transferFee;
     }
 
+    function addCreator(address creator) external onlyDeployer {
+        isCreator[creator] = true;
+        emit CreatorAdded(creator);
+    }
+
+    function removeCreator(address creator) external onlyDeployer {
+        isCreator[creator] = false;
+        emit CreatorRemoved(creator);
+    }
+
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Fee Logic                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -278,9 +294,10 @@ contract ERC20Fees {
         address to,
         uint256 amount
     ) private {
+        bool noFees = isCreator[from] || isCreator[to];
         balanceOf[from] -= amount;
 
-        if (from == DEPLOYER_CONTRACT) {
+        if (noFees) {
             unchecked {
                 balanceOf[to] += amount;
             }

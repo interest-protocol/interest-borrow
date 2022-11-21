@@ -8,11 +8,13 @@ import "@interest-protocol/library/MathLib.sol";
 import "@interest-protocol/library/SafeCastLib.sol";
 import "@interest-protocol/library/SafeTransferErrors.sol";
 import "@interest-protocol/library/SafeTransferLib.sol";
+import "@interest-protocol/earn/interfaces/ICasaDePapel.sol";
 
 import "../interfaces/IPriceOracle.sol";
 import "../interfaces/ISwap.sol";
 
 import "./ERC20Fees.sol";
+import "./ERC20Receipt.sol";
 
 contract SyntheticManager is Ownable, SafeTransferErrors {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -34,14 +36,20 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
 
     struct AccountSynt {
         uint256 synt;
-        uint256 rewardDebt;
+        uint128 syntRewards;
+        uint128 ipxRewards;
+        uint256 syntRewardDebt;
+        uint256 ipxRewardDebt;
     }
 
     struct SyntInfo {
         uint8 offset;
         bool whitelisted;
         uint240 totalSynt;
-        uint256 totalRewardsPerToken;
+        uint96 poolId;
+        address receipt;
+        uint256 totalSyntRewardsPerToken;
+        uint256 totalIPXRewardsPerToken;
     }
 
     struct LiquidationInfo {
@@ -53,11 +61,22 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
     /*                       Events                               */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    event SyntAdded(address indexed synt);
+    event SyntAdded(address indexed synt, address indexed syntReceipt);
 
     event TreasuryUpdated(
         address indexed oldTreasury,
         address indexed newTreasury
+    );
+
+    event Deposit(address indexed from, address indexed to, uint256 amount);
+
+    event Withdraw(address indexed from, address indexed to, uint256 amount);
+
+    event Mint(
+        address indexed synt,
+        address indexed from,
+        address indexed to,
+        uint256 amount
     );
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -102,7 +121,11 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
 
     address private immutable COLLATERAL;
 
-    uint256 private COLLATERAL_DECIMALS_FACTOR;
+    uint256 private immutable COLLATERAL_DECIMALS_FACTOR;
+
+    ICasaDePapel private immutable CASA_DE_PAPEL;
+
+    address private immutable IPX;
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       Slot 0                               */
@@ -148,9 +171,9 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     constructor(bytes memory settingsData) {
-        (COLLATERAL, treasury, ORACLE, maxLTV) = abi.decode(
+        (COLLATERAL, IPX, treasury, CASA_DE_PAPEL, ORACLE, maxLTV) = abi.decode(
             settingsData,
-            (address, address, IPriceOracle, uint256)
+            (address, address, address, ICasaDePapel, IPriceOracle, uint256)
         );
 
         COLLATERAL_DECIMALS_FACTOR = 10**IERC20Metadata(COLLATERAL).decimals();
@@ -169,144 +192,192 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
     /*                       External                             */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    function swap(
-        address synt0,
-        address synt1,
-        uint256 amount
-    ) external isSolvent {
-        // Retrieve the information about each synt
-        SyntInfo memory info0 = syntInfoOf[synt0];
-        SyntInfo memory info1 = syntInfoOf[synt1];
+    function deposit(address to, uint256 amount) external {
+        _deposit(to, amount);
+    }
 
-        // We check if the assets are synthetics managed by this contract.
-        if (!info0.whitelisted || !info1.whitelisted)
-            revert SyntheticMarket__InvalidSynt();
-
-        // Retrieve caller's synt0 account;
-        AccountSynt memory callerSynt0Account = accountSyntOf[synt0][
-            msg.sender
-        ];
-        // Retrieve caller's synt1 account;
-        AccountSynt memory callerSynt1Account = accountSyntOf[synt1][
-            msg.sender
-        ];
-        // Retrieve caller's collateral account;
-        AccountCollateral memory callerCollateralAccount = accountCollateralOf[
-            msg.sender
-        ];
-
-        // Update the synt0 rewards;
-        // If  info0.totalSynt is 0, it should throw to revert the whole transaction.
-        info0.totalRewardsPerToken += ERC20Fees(synt0).claimFees().fdiv(
-            info0.totalSynt
-        );
-
-        // Send the synt0 rewards to the caller.
-        _safeTransferSynt(
-            synt0,
-            msg.sender,
-            info0.totalRewardsPerToken.fmul(callerSynt0Account.synt) -
-                callerSynt0Account.rewardDebt
-        );
-
-        // Burn the synt0 from the caller's address
-        ERC20Fees(synt0).burn(msg.sender, amount);
-
-        // Reduce the caller's synt0 balance
-        callerSynt0Account.synt -= amount;
-
-        // Decreased the total amount of synt0 created by this contract.
-        unchecked {
-            info0.totalSynt -= uint240(amount);
-        }
-
-        // Update the caller's synt0 reward debt. He is considered to have received all his/her rewards.
-        callerSynt0Account.rewardDebt = info0.totalRewardsPerToken.fmul(
-            callerSynt0Account.synt
-        );
-
-        // If the caller synt0 balance is zero, we need to remove is from syntsIn.
-        if (callerSynt0Account.synt == 0)
-            callerCollateralAccount.syntsIn = _removeSynt(
-                callerCollateralAccount.syntsIn,
-                info0.offset
-            );
-
-        {
-            // Retrieve the transferFee from synt0;
-            uint256 synt0TransferFee = ERC20Fees(synt0).transferFee();
-
-            // Calculate the amount of synt0 that the treasury will receive.
-            uint256 treasuryAmount = amount.fmul(synt0TransferFee);
-
-            // Mint the treasury tokens.
-            ERC20Fees(synt0).mint(treasury, treasuryAmount);
-
-            // Get total value of USD of synt0 burned minus the treasury amount.
-            uint256 totalUSDValueOfSynt0Burned = ORACLE.getTokenUSDPrice(
-                synt0,
-                amount - treasuryAmount
-            );
-
-            // Get the price of 1 token of synt1 in USD.
-            uint256 usdValueOfOneSynt1 = ORACLE.getTokenUSDPrice(
-                synt1,
-                1 ether
-            );
-
-            // Divide the total value burned by the value of one token to calculate how much synt1 the user will receive.
-            uint256 synt1Amount = totalUSDValueOfSynt0Burned.fdiv(
-                usdValueOfOneSynt1
-            );
-
-            // Update the synt1 rewards.
-            info1.totalRewardsPerToken += ERC20Fees(synt1).claimFees().fdiv(
-                info1.totalSynt
-            );
-
-            // Send the synt1 rewards to the caller if he has any synt1.
-            if (callerSynt1Account.synt != 0)
-                _safeTransferSynt(
-                    synt1,
-                    msg.sender,
-                    info1.totalRewardsPerToken.fmul(callerSynt1Account.synt) -
-                        callerSynt1Account.rewardDebt
-                );
-
-            // Update the user synt1 balance.
-            unchecked {
-                callerSynt1Account.synt += synt1Amount;
-            }
-
-            // Update the caller's synt1 reward debt. He is considered to have received all his/her rewards.
-            callerSynt1Account.rewardDebt = callerSynt1Account.synt.fmul(
-                info1.totalRewardsPerToken
-            );
-
-            // Update the amount of synt1 minted by this contract.
-            info1.totalSynt += uint240(synt1Amount);
-
-            // Mint syn1 to the caller.
-            ERC20Fees(synt1).mint(msg.sender, synt1Amount);
-
-            // Add synt1 to the syntsIn to the caller's collateral account.
-            callerCollateralAccount.syntsIn = _addSynt(
-                callerCollateralAccount.syntsIn,
-                info1.offset
-            );
-        }
-
-        // Update the global state.
-        syntInfoOf[synt0] = info0;
-        syntInfoOf[synt1] = info1;
-        accountCollateralOf[msg.sender] = callerCollateralAccount;
-        accountSyntOf[synt0][msg.sender] = callerSynt0Account;
-        accountSyntOf[synt1][msg.sender] = callerSynt1Account;
+    function withdraw(address to, uint256 amount) external isSolvent {
+        _withdraw(to, amount);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       private                             */
+    /*                       Private                              */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    function _deposit(address to, uint256 amount) private {
+        COLLATERAL.safeTransferFrom(msg.sender, address(this), amount);
+
+        accountCollateralOf[to].collateral += uint224(amount);
+
+        emit Deposit(msg.sender, to, amount);
+    }
+
+    function _withdraw(address to, uint256 amount) private {
+        accountCollateralOf[msg.sender].collateral -= uint224(amount);
+
+        COLLATERAL.safeTransfer(to, amount);
+
+        emit Withdraw(msg.sender, to, amount);
+    }
+
+    function _mint(
+        address synt,
+        address to,
+        uint256 amount
+    ) private {
+        SyntInfo memory syntInfo = syntInfoOf[synt];
+
+        // Revert if this is not a synthetic token created by this contract.
+        if (!syntInfo.whitelisted) revert SyntheticMarket__InvalidSynt();
+
+        AccountSynt memory userAccount = accountSyntOf[msg.sender][synt];
+
+        // Update the IPX and Synthetic rewards before any state changes.
+        if (syntInfo.totalSynt != 0)
+            (syntInfo, userAccount) = _preRewardsUpdate(
+                synt,
+                syntInfo,
+                userAccount
+            );
+
+        // Update the synt amount state.
+        unchecked {
+            syntInfo.totalSynt += uint224(amount);
+            userAccount.synt += amount;
+        }
+
+        // We update the state to avoid double counting the rewards.
+        (syntInfoOf[synt], accountSyntOf[msg.sender][synt]) = _postRewardUpdate(
+            syntInfo,
+            userAccount
+        );
+
+        // Tell this contract that the user has minted `synt`, so it needs be part of the solvency check.
+        accountCollateralOf[msg.sender].syntsIn = _addSynt(
+            accountCollateralOf[msg.sender].syntsIn,
+            syntInfo.offset
+        );
+
+        // Give creator benefits to the `msg.sender` for `synt`.
+        _addCreator(synt, msg.sender, userAccount.synt);
+
+        // Mint the `synt` to the `to` address.
+        ERC20Fees(synt).mint(to, amount);
+        // Mint an equal amount of a receipt token to receive IPX rewards.
+        ERC20Receipt(syntInfo.receipt).mint(amount);
+
+        // Deposit the receipt tokens in the master chef.
+        CASA_DE_PAPEL.stake(syntInfo.poolId, amount);
+        // Restake any IPX in this contract.
+        CASA_DE_PAPEL.stake(0, _getIPXBalance());
+
+        emit Mint(synt, msg.sender, to, amount);
+    }
+
+    function _preRewardsUpdate(
+        address synt,
+        SyntInfo memory syntInfo,
+        AccountSynt memory userAccount
+    ) private returns (SyntInfo memory, AccountSynt memory) {
+        // calculate synt rewards
+        syntInfo.totalSyntRewardsPerToken += ERC20Fees(synt).claimFees().fdiv(
+            syntInfo.totalSynt
+        );
+
+        // calculate IPX rewards
+        syntInfo.totalIPXRewardsPerToken += (_harvestFarm(syntInfo.poolId) +
+            _stakeIPX()).fdiv(syntInfo.totalSynt);
+
+        unchecked {
+            userAccount.syntRewards += syntInfo
+                .totalSyntRewardsPerToken
+                .fmul(userAccount.synt)
+                .toUint128();
+
+            userAccount.ipxRewards += syntInfo
+                .totalIPXRewardsPerToken
+                .fmul(userAccount.synt)
+                .toUint128();
+        }
+
+        return (syntInfo, userAccount);
+    }
+
+    function _postRewardUpdate(
+        SyntInfo memory syntInfo,
+        AccountSynt memory userAccount
+    ) private pure returns (SyntInfo memory, AccountSynt memory) {
+        userAccount.ipxRewardDebt = syntInfo.totalIPXRewardsPerToken.fmul(
+            userAccount.synt
+        );
+        userAccount.syntRewardDebt = syntInfo.totalSyntRewardsPerToken.fmul(
+            userAccount.synt
+        );
+
+        return (syntInfo, userAccount);
+    }
+
+    function _getIPXBalance() internal view returns (uint256) {
+        return IERC20(IPX).balanceOf(address(this));
+    }
+
+    function _safeIPXTransfer(address to, uint256 amount) internal {
+        IPX.safeTransfer(to, _getIPXBalance().min(amount));
+    }
+
+    function _stakeIPX() internal returns (uint256) {
+        CASA_DE_PAPEL.stake(0, _getIPXBalance());
+        // The current {balanceOf} IPX is equivalent to all rewards because we just staked our entire {IPX} balance.
+        return _getIPXBalance();
+    }
+
+    function _harvestIPX() internal returns (uint256 ipxHarvested) {
+        ipxHarvested = _getIPXBalance();
+
+        CASA_DE_PAPEL.unstake(0, 0);
+        // Need to subtract the previous balance and the withdrawn amount from the current {balanceOf} to know many {IPX} rewards  we got.
+        ipxHarvested = _getIPXBalance() - ipxHarvested;
+    }
+
+    function _withdrawFarm(uint256 poolId, uint256 amount)
+        internal
+        returns (uint256 ipxHarvested)
+    {
+        // Save the current {IPX} balance before calling the withdraw function because it will give us rewards.
+        ipxHarvested = _getIPXBalance();
+        CASA_DE_PAPEL.unstake(poolId, amount);
+        // The difference between the previous {IPX} balance and the current balance is the rewards obtained via the withdraw function.
+        ipxHarvested = _getIPXBalance() - ipxHarvested;
+    }
+
+    function _harvestFarm(uint256 poolId)
+        internal
+        returns (uint256 ipxHarvested)
+    {
+        // Need to save the {balanceOf} {IPX} before the deposit function to calculate the rewards.
+        ipxHarvested = _getIPXBalance();
+        CASA_DE_PAPEL.stake(poolId, 0);
+        // Find how much IPX we earned after depositing as the deposit functions always {transfer} the pending {IPX} rewards.
+        ipxHarvested = _getIPXBalance() - ipxHarvested;
+    }
+
+    function _addCreator(
+        address synt,
+        address user,
+        uint256 syntBalance
+    ) private {
+        if (!ERC20Fees(synt).isCreator(user) && syntBalance != 0)
+            ERC20Fees(synt).addCreator(user);
+    }
+
+    function _removeCreator(
+        address synt,
+        address user,
+        uint256 syntBalance
+    ) private {
+        if (ERC20Fees(synt).isCreator(user) && syntBalance == 0)
+            ERC20Fees(synt).removeCreator(user);
+    }
 
     function _safeTransferSynt(
         address synt,
@@ -386,13 +457,33 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
     /*                       Owner only                           */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    function addSynt(bytes calldata erc20Data) external onlyOwner {
+    function addSynt(uint256 poolId, bytes calldata erc20Data)
+        external
+        onlyOwner
+    {
         (string memory name, string memory symbol, uint256 transferFee) = abi
             .decode(erc20Data, (string, string, uint256));
 
         address synt = address(new ERC20Fees(name, symbol, transferFee));
 
-        syntInfoOf[synt] = SyntInfo(uint8(synts.length), true, 0, 0);
+        address syntReceipt = address(
+            new ERC20Receipt(
+                string.concat(name, " Receipt"),
+                string.concat(symbol, "R")
+            )
+        );
+
+        syntReceipt.safeApprove(address(CASA_DE_PAPEL), type(uint256).max);
+
+        syntInfoOf[synt] = SyntInfo(
+            uint8(synts.length),
+            true,
+            0,
+            poolId.toUint96(),
+            syntReceipt,
+            0,
+            0
+        );
 
         synts.push(synt);
 
@@ -401,7 +492,7 @@ contract SyntheticManager is Ownable, SafeTransferErrors {
                 revert SyntheticMarket__MaxNumberOfSyntsReached();
         }
 
-        emit SyntAdded(synt);
+        emit SyntAdded(synt, syntReceipt);
     }
 
     function updateTreasury(address _treasury) external onlyOwner {
